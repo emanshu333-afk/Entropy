@@ -1,0 +1,32 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Join Entropy{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'entropy.css' %}">
+  <link rel="stylesheet" href="{% static 'auth.css' %}">
+</head>
+<body class="auth-page">
+  <main class="auth">
+    <a class="brand" href="{% url 'marketplace:home' %}"><span class="brand-mark">e</span><span class="wordmark">entropy</span></a>
+    <section class="auth-card">
+      <h1>{% block heading %}Welcome back{% endblock %}</h1>
+      <p class="muted">{% block intro %}Log in to your campus marketplace.{% endblock %}</p>
+      <form method="post">
+        {% csrf_token %}
+        {% block fields %}
+        <div class="field"><label for="email">Campus email</label><input id="email" name="email" type="email" placeholder="you@campus.edu" required></div>
+        <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" required></div>
+        {% endblock %}
+        <button class="btn btn-primary" type="submit">{% block submit %}Log in{% endblock %}</button>
+      </form>
+      <p class="switch">{% block switch %}New here? <a href="{% url 'accounts:signup' %}">Create an account</a>{% endblock %}</p>
+    </section>
+  </main>
+</body>
+</html>
