@@ -2,20 +2,16 @@
 
 ## Current state
 
-The `templates/` folder contains a Django-compatible Notion-inspired MVP shell. All templates are kept directly in this one folder. It assumes named URL namespaces and can be connected to Django views without changing the markup.
+The frontend now follows the backend handoff structure. Templates live under `templates/bunkloop/` and shared assets live under `static/css/` and `static/js/`.
 
 ## Templates
 
-- `base.html`: shared navigation, top bar, responsive layout, and design tokens.
-- `home.html`: marketplace feed, category filters, sort control, and listing cards.
-- `detail.html`: listing facts, seller identity, chat action, and report action.
-- `form.html`: create listing form with image upload, sell/rent, condition, price, and pickup fields.
-- `mine.html`: owner listing management and status display.
-- `inbox.html`: conversation list and listing-linked chat room.
-- `profile.html`: profile and verified-community identity.
-- `reports.html`: reported-listing moderation table.
-- `auth.html`: login and signup base template.
-- `../static/entropy.css`: shared stylesheet and responsive rules.
+- `templates/bunkloop/base.html`: shared mobile-first page shell.
+- `templates/bunkloop/signup.html`: required student profile fields and conditional hostel field.
+- `templates/bunkloop/item_form.html`: category, camera-first photos, sell/rent, price, condition, and description.
+- `templates/bunkloop/home.html`: browse cards with image, category, price, condition, and listing type.
+- `static/css/app.css`: shared responsive design system.
+- `static/js/item_form.js`: hostel validation, sell/rent label, four-photo limit, and previews.
 
 ## Expected URL names
 
@@ -29,15 +25,13 @@ Wire these names in the backend, or update the `{% url %}` calls when the URL de
 ## Backend handoff checklist
 
 - Configure `TEMPLATES[0]['DIRS']` to include `BASE_DIR / 'templates'`.
-- Add the URL namespaces listed above.
-- Replace hard-coded demo listing data with context querysets.
-- Serve uploaded media and provide `listing.images` for the gallery.
-- Add authenticated user context to the sidebar and profile.
-- Enforce ownership for listing edits, deletes, and status changes.
-- Add POST handling and validation to the listing form and chat composer.
-- Add a unique constraint for `(listing_id, buyer_id, seller_id)` conversations.
-- Exclude `sold`, `rented`, and `closed` listings from available results.
-- Connect report actions to the moderation workflow.
+- Add the `bunkloop` URL namespace with `home`, `item_create`, `item_detail`, and `profile` names, or update the `{% url %}` tags.
+- Configure `TEMPLATES[0]['DIRS']` to include `BASE_DIR / 'templates'`.
+- Configure static files so `static/css/app.css` and `static/js/item_form.js` resolve.
+- Pass a `listings` queryset to `home.html`; it expects `item.images.first`, `title`, `price`, `category`, `listing_type`, `condition`, and `created_at`.
+- Bind signup and item form fields to the backend forms while preserving the field names in the templates.
+- Serve uploaded media for listing images.
+- Enforce hostel validation server-side as well as in the browser.
 
 ## MVP behavior to preserve
 
