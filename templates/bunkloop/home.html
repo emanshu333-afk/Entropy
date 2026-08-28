@@ -1,0 +1,52 @@
+{% extends "bunkloop/base.html" %}
+{% block title %}Browse marketplace | Bunkloop{% endblock %}
+{% block content %}
+<section class="page browse-page">
+    <div class="browse-heading">
+        <div>
+            <div class="eyebrow">Your campus marketplace</div>
+            <h1>Useful things,<br>close to home.</h1>
+            <p class="intro">Buy, sell, or rent from students in your community.</p>
+        </div>
+        <a class="button button-primary" href="{% url 'bunkloop:item_create' %}">+ Post an item</a>
+    </div>
+    <div class="browse-toolbar">
+        <label class="search-field">
+            <span aria-hidden="true">⌕</span>
+            <input type="search" name="q" placeholder="Search items..." aria-label="Search items">
+        </label>
+        <div class="filter-chips" aria-label="Filter listings">
+            <button class="chip active" type="button">All items</button>
+            <button class="chip" type="button">Books and Notes</button>
+            <button class="chip" type="button">Electronics</button>
+            <button class="chip" type="button">Furniture</button>
+            <button class="chip" type="button">Sell</button>
+            <button class="chip" type="button">Rent</button>
+        </div>
+    </div>
+    <div class="results-heading">
+        <h2>Fresh on campus</h2>
+        <span>12 available items</span>
+    </div>
+    <div class="listing-grid">
+        {% for item in listings %}
+            <article class="listing-card">
+                <a href="{% url 'bunkloop:item_detail' item.pk %}">
+                    {% if item.images.first %}
+                        <img class="listing-image" src="{{ item.images.first.image.url }}" alt="{{ item.title }}">
+                    {% else %}
+                        <div class="listing-image placeholder-image">No image</div>
+                    {% endif %}
+                    <div class="listing-body">
+                        <div class="listing-line"><h3>{{ item.title }}</h3><strong>₹{{ item.price }}</strong></div>
+                        <div class="listing-tags"><span>{{ item.category }}</span><span>{{ item.listing_type }}</span></div>
+                        <div class="listing-meta"><span>{{ item.condition }}</span><span>{{ item.created_at|timesince }} ago</span></div>
+                    </div>
+                </a>
+            </article>
+        {% empty %}
+            <div class="empty-state"><h2>No listings yet</h2><p>Be the first student to share something useful.</p><a class="button button-primary" href="{% url 'bunkloop:item_create' %}">Post an item</a></div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
