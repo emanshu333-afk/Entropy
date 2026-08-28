@@ -1,0 +1,80 @@
+{% extends "bunkloop/base.html" %}
+{% load static %}
+{% block title %}Create your profile | Bunkloop{% endblock %}
+{% block content %}
+<section class="page narrow-page">
+    <div class="eyebrow">Join your student community</div>
+    <h1>Create your profile</h1>
+    <p class="intro">A few details help people know they are buying from someone nearby.</p>
+    <form class="form-card" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="form-errors">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="form-grid">
+            <div class="field field-wide">
+                <label for="id_full_name">Full name</label>
+                <input id="id_full_name" name="full_name" type="text" autocomplete="name" required>
+            </div>
+            <div class="field">
+                <label for="id_registration_id">Registration ID</label>
+                <input id="id_registration_id" name="registration_id" type="text" required>
+            </div>
+            <div class="field">
+                <label for="id_university">University</label>
+                <select id="id_university" name="university" required>
+                    <option value="">Choose university</option>
+                    <option>Delhi University</option>
+                    <option>Amity University</option>
+                    <option>Other</option>
+                </select>
+            </div>
+            <div class="field field-wide">
+                <label for="id_profile_image">Profile image</label>
+                <input id="id_profile_image" name="profile_image" type="file" accept="image/*">
+                <span class="field-help">Optional. A clear photo helps build trust.</span>
+            </div>
+            <div class="field">
+                <label for="id_contact_number">Contact number</label>
+                <input id="id_contact_number" name="contact_number" type="tel" autocomplete="tel" required>
+            </div>
+            <div class="field">
+                <label for="id_student_type">Student type</label>
+                <select id="id_student_type" name="student_type" required>
+                    <option value="">Choose student type</option>
+                    <option value="hosteler">Hosteler</option>
+                    <option value="day_scholar">Day scholar</option>
+                </select>
+            </div>
+            <div class="field field-wide hostel-field" data-hostel-field hidden>
+                <label for="id_hostel">Hostel</label>
+                <select id="id_hostel" name="hostel">
+                    <option value="">Choose hostel</option>
+                    <option>Hostel A</option>
+                    <option>Hostel B</option>
+                    <option>Hostel C</option>
+                </select>
+                <span class="field-help">Required for hostel residents.</span>
+            </div>
+            <div class="field">
+                <label for="id_email">Email</label>
+                <input id="id_email" name="email" type="email" autocomplete="email" required>
+            </div>
+            <div class="field">
+                <label for="id_gender">Gender</label>
+                <select id="id_gender" name="gender" required>
+                    <option value="">Choose gender</option>
+                    <option>Female</option>
+                    <option>Male</option>
+                    <option>Non-binary</option>
+                    <option>Prefer not to say</option>
+                </select>
+            </div>
+        </div>
+        <button class="button button-primary button-wide" type="submit">Create profile</button>
+    </form>
+</section>
+{% endblock %}
+{% block extra_js %}
+    <script src="{% static 'js/item_form.js' %}"></script>
+{% endblock %}

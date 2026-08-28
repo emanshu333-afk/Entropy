@@ -1,63 +1,78 @@
-{% extends 'bunkloop/base.html' %}
-
-{% block title %}Post an Item{% endblock %}
-
+{% extends "bunkloop/base.html" %}
+{% load static %}
+{% block title %}Post an item | Bunkloop{% endblock %}
 {% block content %}
-<section class="container form-shell">
+<section class="page narrow-page">
+    <div class="eyebrow">Give it another life</div>
     <h1>Post an item</h1>
-
-    <form class="listing-form" method="post" enctype="multipart/form-data">
+    <p class="intro">List something useful for students in your community.</p>
+    <form class="form-card" method="post" enctype="multipart/form-data">
         {% csrf_token %}
-
-        <div class="field-group">
-            <label for="category">Item category</label>
-            <select id="category" name="category">
-                <option value="">Select category</option>
-                <option value="books">Books</option>
-                <option value="electronics">Electronics</option>
-                <option value="furniture">Furniture</option>
-                <option value="sports">Sports</option>
-            </select>
-        </div>
-
-        <div class="field-group">
-            <label>Upload photos</label>
-            <div class="image-upload-box">
-                <input type="file" name="images" accept="image/*" capture="environment" multiple>
-                <small>Up to 4 images</small>
+        {% if form.non_field_errors %}
+            <div class="form-errors">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="form-grid">
+            <div class="field field-wide">
+                <label for="id_category">Category</label>
+                <select id="id_category" name="category" required>
+                    <option value="">Choose a category</option>
+                    <option>Books and Notes</option>
+                    <option>Electronics</option>
+                    <option>Cycles and Transport</option>
+                    <option>Furniture</option>
+                    <option>Appliances</option>
+                    <option>Clothing and Accessories</option>
+                    <option>Sports and Fitness</option>
+                    <option>Room Essentials</option>
+                    <option>Other</option>
+                </select>
+            </div>
+            <fieldset class="field field-wide listing-type-field">
+                <legend>Listing type</legend>
+                <div class="choice-group">
+                    <label class="choice-card">
+                        <input type="radio" name="listing_type" value="sell" checked>
+                        <span><strong>Sell</strong><small>One-time price</small></span>
+                    </label>
+                    <label class="choice-card">
+                        <input type="radio" name="listing_type" value="rent">
+                        <span><strong>Rent</strong><small>Temporary use</small></span>
+                    </label>
+                </div>
+            </fieldset>
+            <div class="field price-field">
+                <label for="id_price" data-price-label>Selling price</label>
+                <div class="input-with-prefix"><span>₹</span><input id="id_price" name="price" type="number" min="0" step="0.01" placeholder="0" required></div>
+            </div>
+            <div class="field">
+                <label for="id_condition">Condition</label>
+                <select id="id_condition" name="condition" required>
+                    <option value="">Choose condition</option>
+                    <option>New</option>
+                    <option>Like New</option>
+                    <option>Good</option>
+                    <option>Fair</option>
+                    <option>Needs Repair</option>
+                </select>
+            </div>
+            <div class="field field-wide">
+                <label for="id_photos">Photos <span class="label-note">Up to 4 images</span></label>
+                <div class="photo-upload">
+                    <input id="id_photos" name="photos" type="file" accept="image/*" capture="environment" multiple required>
+                    <label class="upload-button" for="id_photos">Take a photo or choose from gallery</label>
+                    <span class="upload-count" data-upload-count>No photos selected</span>
+                    <div class="photo-preview" data-photo-preview aria-live="polite"></div>
+                </div>
+            </div>
+            <div class="field field-wide">
+                <label for="id_description">Description <span class="label-note">Optional</span></label>
+                <textarea id="id_description" name="description" placeholder="Add useful details about the item..."></textarea>
             </div>
         </div>
-
-        <div class="field-group radio-group">
-            <label>Listing type</label>
-            <div class="options">
-                <label><input type="radio" name="listing_type" value="sell" checked> Sell</label>
-                <label><input type="radio" name="listing_type" value="rent"> Rent</label>
-            </div>
-        </div>
-
-        <div class="field-group">
-            <label for="price">Price</label>
-            <input id="price" type="number" name="price" min="0" step="0.01" placeholder="Enter price">
-        </div>
-
-        <div class="field-group">
-            <label for="condition">Condition</label>
-            <select id="condition" name="condition">
-                <option value="new">New</option>
-                <option value="like_new">Like New</option>
-                <option value="good">Good</option>
-                <option value="fair">Fair</option>
-                <option value="needs_repair">Needs Repair</option>
-            </select>
-        </div>
-
-        <div class="field-group">
-            <label for="description">Description</label>
-            <textarea id="description" name="description" rows="4" placeholder="Briefly describe the item"></textarea>
-        </div>
-
-        <button type="submit" class="primary-btn">List item</button>
+        <button class="button button-primary button-wide" type="submit">Publish listing</button>
     </form>
 </section>
+{% endblock %}
+{% block extra_js %}
+    <script src="{% static 'js/item_form.js' %}"></script>
 {% endblock %}
