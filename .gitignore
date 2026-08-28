@@ -4,6 +4,14 @@
 /node_modules
 /.pnp
 .pnp.js
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
 
 # testing
 /coverage
@@ -14,6 +22,11 @@
 
 # production
 /build
+/staticfiles/
+
+# User-uploaded media
+/media/*
+!/media/.gitkeep
 
 # misc
 .DS_Store
