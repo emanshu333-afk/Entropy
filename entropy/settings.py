@@ -24,17 +24,104 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-change-me')
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() not in ('false', '0', 'no')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-change-me'
+    else:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set when DEBUG=False')
+elif not DEBUG and SECRET_KEY in ('django-insecure-change-me', 'django-insecure-change-me-for-dev'):
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured('Insecure DJANGO_SECRET_KEY not allowed when DEBUG=False')
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if os.environ.get('DJANGO_ALLOWED_HOSTS') else []
+# Hosts — no hard-coded LAN IP; use env or auto-discovery
+_default_hosts = 'localhost,127.0.0.1,testserver'
+if DEBUG:
+    # In development allow any host so peers on LAN work without env change
+    ALLOWED_HOSTS = ['*']
+    env_hosts = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', _default_hosts).split(',') if h.strip()]
+    if env_hosts and '*' not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS = list(set(ALLOWED_HOSTS + env_hosts))
+else:
+    ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', _default_hosts).split(',') if h.strip()]
+
+# Auto-add this host's LAN IP for convenience (dynamic, not hard-coded)
+# Uses env LAN_DISCOVERY_IP (default 8.8.8.8) to find LAN IP without hard-coding dev IP
+try:
+    import socket
+    _discovery_ip = os.environ.get('LAN_DISCOVERY_IP', '8.8.8.8')
+    _discovery_port = int(os.environ.get('LAN_DISCOVERY_PORT', '80'))
+    _local_ip = socket.gethostbyname(socket.gethostname())
+    if _local_ip not in ALLOWED_HOSTS and '*' not in ALLOWED_HOSTS and _local_ip != '127.0.0.1':
+        ALLOWED_HOSTS.append(_local_ip)
+    _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        _s.connect((_discovery_ip, _discovery_port))
+        _lan = _s.getsockname()[0]
+        if _lan not in ALLOWED_HOSTS and '*' not in ALLOWED_HOSTS and _lan != '127.0.0.1':
+            ALLOWED_HOSTS.append(_lan)
+    finally:
+        _s.close()
+except Exception:
+    pass
+
+# CSRF must trust the network origins when accessing via IP:port — env-driven, no hard-coded LAN IP
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get(
+    'CSRF_TRUSTED_ORIGINS',
+    'http://localhost:8000,http://127.0.0.1:8000'
+).split(',') if o.strip()]
+if DEBUG and '*' in ALLOWED_HOSTS:
+    # Dynamically add LAN CSRF origins based on discovered IPs (not hard-coded)
+    try:
+        import socket as _csock
+        _candidates = set()
+        try:
+            _candidates.add(_csock.gethostbyname(_csock.gethostname()))
+        except Exception:
+            pass
+        try:
+            _s2 = _csock.socket(_csock.AF_INET, _csock.SOCK_DGRAM)
+            try:
+                _s2.connect((os.environ.get('LAN_DISCOVERY_IP', '8.8.8.8'), int(os.environ.get('LAN_DISCOVERY_PORT', '80'))))
+                _candidates.add(_s2.getsockname()[0])
+            finally:
+                _s2.close()
+        except Exception:
+            pass
+        for _host in _candidates:
+            if not _host or _host == '127.0.0.1' or _host in ALLOWED_HOSTS and '*' in ALLOWED_HOSTS:
+                continue
+            for _scheme in ['http', 'https']:
+                for _port in ['8000', '3000', '8080']:
+                    _origin = f'{_scheme}://{_host}:{_port}'
+                    if _origin not in CSRF_TRUSTED_ORIGINS:
+                        CSRF_TRUSTED_ORIGINS.append(_origin)
+        # Also allow 0.0.0.0 origins are NOT valid Origin headers — don't add them
+    except Exception:
+        pass
+
+# Security hardening when not DEBUG
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '0'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'False').lower() == 'true'
+    SECURE_HSTS_PRELOAD = os.environ.get('SECURE_HSTS_PRELOAD', 'False').lower() == 'true'
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
+    'rest_framework',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -46,6 +133,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -66,25 +154,97 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'bunkloop.context_processors.nav_counts',
             ],
         },
     },
 ]
 
 WSGI_APPLICATION = 'entropy.wsgi.application'
+ASGI_APPLICATION = 'entropy.asgi.application'
+
+# Redis / Channels (Docker-aware) — plan §27
+# In Docker (DB_HOST=db) use Redis service; in local dev without Redis, use InMemory to avoid connection struggles
+REDIS_HOST = os.environ.get('REDIS_HOST')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
+REDIS_URL = os.environ.get('REDIS_URL')
+
+if REDIS_HOST:
+    # Explicit REDIS_HOST set — use Redis
+    _channel_hosts = [REDIS_URL] if REDIS_URL else [(REDIS_HOST, REDIS_PORT)]
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {'hosts': _channel_hosts},
+        },
+    }
+elif os.environ.get('DB_HOST') == 'db':
+    # Inside Docker Compose — use redis service
+    REDIS_URL = REDIS_URL or 'redis://redis:6379/0'
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {'hosts': [REDIS_URL]},
+        },
+    }
+else:
+    # Local dev without Docker/Redis — use InMemory to keep live message box stable (no Redis required)
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
+
+# Force InMemory for tests (plan §27) — overrides above
+import sys
+if 'test' in sys.argv or os.environ.get('USE_INMEMORY_CHANNEL_LAYER') == '1':
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
+
+# DRF (plan §2)
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.CursorPagination',
+    'PAGE_SIZE': 50,
+}
 
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+DB_ENGINE = os.environ.get('DB_ENGINE') or 'django.db.backends.sqlite3'
+DB_NAME = os.environ.get('DB_NAME') or BASE_DIR / 'db.sqlite3'
+DB_USER = os.environ.get('DB_USER')
+DB_PASSWORD = os.environ.get('DB_PASSWORD')
+DB_HOST = os.environ.get('DB_HOST')
+DB_PORT = os.environ.get('DB_PORT')
+
+# Build the test database configuration
+TEST_DB_CONFIG = {}
+if 'postgresql' in DB_ENGINE or 'postgres' in DB_ENGINE:
+    TEST_DB_CONFIG = {'NAME': 'test_bunkloop_db'}
+elif 'sqlite' in DB_ENGINE:
+    TEST_DB_CONFIG = {'NAME': ':memory:'}
+else:
+    TEST_DB_CONFIG = {'NAME': 'test_bunkloop_db'}
+
 DATABASES = {
     'default': {
-        'ENGINE': os.environ.get('DB_ENGINE'),
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT'),
+        'ENGINE': DB_ENGINE,
+        'NAME': DB_NAME,
+        'USER': DB_USER or '',
+        'PASSWORD': DB_PASSWORD or '',
+        'HOST': DB_HOST or '',
+        'PORT': DB_PORT or '',
+        'TEST': TEST_DB_CONFIG,
     }
 }
 
@@ -110,12 +270,12 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
+# Internationalization — India (user reports UTC 00:00 vs IST)
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
@@ -128,6 +288,73 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587') or 587)
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@bunkloop.local')
+
+# Email validation — env-driven (was hard-coded denied list + academic heuristic)
+ALLOWED_EMAIL_DENIED_DOMAINS = [d.strip().lower() for d in os.environ.get('ALLOWED_EMAIL_DENIED_DOMAINS', 'gmail.com,yahoo.com,outlook.com,hotmail.com,icloud.com,aol.com').split(',') if d.strip()]
+# Comma-separated substrings that indicate academic domain; e.g. ".edu,.ac.,university,edu." (was hard-coded)
+ALLOWED_ACADEMIC_SUFFIXES = [s.strip().lower() for s in os.environ.get('ALLOWED_ACADEMIC_SUFFIXES', '.edu,.ac.,university,edu.').split(',') if s.strip()]
+
+# OTP — env-driven (was hard-coded 6 digits, 600s)
+OTP_LENGTH = int(os.environ.get('OTP_LENGTH', '6'))
+OTP_TTL_SECONDS = int(os.environ.get('OTP_TTL_SECONDS', '600'))
+
+# Chat — env-driven (was hard-coded 5000, 30/min, 100)
+CHAT_MAX_MESSAGE_LENGTH = int(os.environ.get('CHAT_MAX_MESSAGE_LENGTH', '5000'))
+CHAT_RATE_LIMIT_PER_MINUTE = int(os.environ.get('CHAT_RATE_LIMIT_PER_MINUTE', '30'))
+CHAT_PAGINATION_MAX_LIMIT = int(os.environ.get('CHAT_PAGINATION_MAX_LIMIT', '100'))
+
+# OTP via sendotp.email — per BunkLoop_SendOTP_Email_Integration_Guide.md
+# Env var is `otp_email_key` (do not rename, never expose to frontend)
+OTP_EMAIL_API_KEY = os.getenv('otp_email_key') or os.getenv('OTP_EMAIL_API_KEY') or os.getenv('SENDOTP_API_KEY')
+SENDOTP_BASE_URL = os.getenv('SENDOTP_BASE_URL', 'https://api.sendotp.email')
+SENDOTP_PURPOSE_SIGNUP = os.getenv('SENDOTP_PURPOSE_SIGNUP', 'signup')
+
+# Payments env (mock by default)
+RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', '')
+RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', '')
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Cache — for OTP challenge ID (guide §8); uses Redis if available, else locmem
+# Don't hard-code Redis host; reuse REDIS_URL/REDIS_HOST logic above
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'bunkloop-otp',
+    }
+}
+# If Redis is configured (Docker or local Redis), prefer RedisCache
+if REDIS_URL and 'test' not in sys.argv:
+    try:
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+                'LOCATION': REDIS_URL,
+            }
+        }
+    except Exception:
+        pass
+
+# Logging for deployment health
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler'},
+    },
+    'root': {'handlers': ['console'], 'level': 'INFO'},
+}

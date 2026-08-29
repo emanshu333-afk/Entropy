@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const photoInput = document.querySelector("#id_photos");
     const uploadCount = document.querySelector("[data-upload-count]");
     const photoPreview = document.querySelector("[data-photo-preview]");
+    const identityInput = document.querySelector("#id_identity_photo");
     const form = document.querySelector(".form-card");
 
     function updateHostelVisibility() {
@@ -91,10 +92,58 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function updateIdentityPreview() {
+        if (!identityInput) return;
+        const existing = document.querySelector("[data-identity-preview]");
+        if (existing) existing.remove();
+        if (!identityInput.files || identityInput.files.length === 0) return;
+        const file = identityInput.files[0];
+        const preview = document.createElement("div");
+        preview.setAttribute("data-identity-preview", "");
+        preview.style.marginTop = "10px";
+        const img = document.createElement("img");
+        img.alt = "Identity preview";
+        img.style.width = "96px";
+        img.style.height = "96px";
+        img.style.objectFit = "cover";
+        img.style.borderRadius = "8px";
+        img.style.border = "1px solid var(--line)";
+        img.src = URL.createObjectURL(file);
+        preview.appendChild(img);
+        const hint = document.createElement("div");
+        hint.textContent = file.name + " (" + Math.round(file.size/1024) + " KB) — will be verified";
+        hint.style.color = "var(--muted)";
+        hint.style.fontSize = "11px";
+        hint.style.marginTop = "6px";
+        preview.appendChild(hint);
+        identityInput.insertAdjacentElement("afterend", preview);
+    }
+
     studentType?.addEventListener("change", updateHostelVisibility);
     genderSelect?.addEventListener("change", updateProfileOptions);
     listingTypeInputs.forEach((input) => input.addEventListener("change", updatePriceLabel));
     photoInput?.addEventListener("change", updatePhotoPreview);
+    identityInput?.addEventListener("change", updateIdentityPreview);
+    const universitySelect = document.querySelector("#id_university");
+    const uniHelp = document.querySelector("[data-university-domains-help]");
+    const emailHelp = document.querySelector("[data-email-domains-help]");
+    function updateUniversityDomainsHelp() {
+        if (!universitySelect || !uniHelp) return;
+        const opt = universitySelect.options[universitySelect.selectedIndex];
+        const domains = opt ? (opt.dataset.domains || "").trim() : "";
+        const uniName = opt ? opt.textContent.split("—")[0].trim() : "";
+        if (domains) {
+            uniHelp.textContent = `Allowed domains for ${uniName}: ${domains}`;
+            if (emailHelp) emailHelp.textContent = `Use one of: ${domains} (e.g., you@${domains.split(",")[0].trim()})`;
+        } else if (opt && opt.value) {
+            uniHelp.textContent = "This university allows any academic domain (.edu, .ac.). Ask admin to add specific domains if needed.";
+            if (emailHelp) emailHelp.textContent = "Use your university email domain for verification (.edu/.ac. or university domain).";
+        } else {
+            uniHelp.textContent = "Select your university to see allowed email domains.";
+            if (emailHelp) emailHelp.textContent = "Use your university email domain for verification.";
+        }
+    }
+    universitySelect?.addEventListener("change", updateUniversityDomainsHelp);
     form?.addEventListener("submit", (event) => {
         if (photoInput && photoInput.files.length > 4) {
             event.preventDefault();
@@ -110,4 +159,5 @@ document.addEventListener("DOMContentLoaded", () => {
     updateProfileOptions();
     updatePriceLabel();
     updatePhotoPreview();
+    updateUniversityDomainsHelp?.();
 });

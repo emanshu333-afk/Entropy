@@ -1,0 +1,48 @@
+{% extends "bunkloop/base.html" %}
+{% load static %}
+{% block title %}Chat — {{ conversation.item.title }} | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/conversation_detail.css' %}">{% endblock %}
+{% block content %}
+<section class="page narrow-page">
+    <a href="{% url 'bunkloop:conversation_list' %}" class="chat-header__back">← Back to messages</a>
+    <div class="chat-card" data-chat-container data-conversation-id="{{ conversation.pk }}" data-conversation-uuid="{{ conversation.uuid }}" data-current-user-id="{{ current_user.id }}" data-current-registration-id="{{ current_user.registration_id }}">
+        <div class="chat-header">
+            <div class="eyebrow">Chat about listing</div>
+            <h2 class="chat-header__title">{{ conversation.item.title }} — ₹{{ conversation.item.price }}</h2>
+            <div class="chat-header__meta">
+                Buyer: {{ conversation.buyer.full_name }} · Seller: {{ conversation.seller.full_name }}
+                {% if conversation.university %}<br>University: {{ conversation.university.name }}{% endif %}
+            </div>
+            <a href="{% url 'bunkloop:item_detail' conversation.item.pk %}" class="button button-small button-secondary chat-header__action">View listing</a>
+            <div class="chat-status" data-chat-status>Connecting…</div>
+        </div>
+        <div class="chat-load-more">
+            <button type="button" data-load-older class="button button-small button-secondary chat-load-more__btn">Load older messages</button>
+            <span class="chat-load-more__hint">Link stays <code>/messages/{{ conversation.pk }}/</code> — data loads via JSON, JS updates HTML</span>
+        </div>
+        <div class="chat-messages" data-messages>
+            {% for msg in chat_messages %}
+                <div data-message-id="{{ msg.pk }}" class="chat-message-row {% if msg.sender_id == current_user.id %}chat-message-row--own{% else %}chat-message-row--other{% endif %}">
+                    <div class="chat-bubble {% if msg.sender_id == current_user.id %}chat-bubble--own{% else %}chat-bubble--other{% endif %}">
+                        <div class="chat-bubble__text">{{ msg.content|default:msg.body|linebreaksbr }}</div>
+                        <div class="chat-bubble__meta">{{ msg.sender.full_name }} · {{ msg.created_at|date:"j M, g:i a" }} {% if msg.is_read and msg.sender_id == current_user.id %}✓ read{% endif %}</div>
+                    </div>
+                </div>
+            {% empty %}
+                <div data-empty class="chat-empty">No messages yet. Start the conversation below — real-time via WebSocket.</div>
+            {% endfor %}
+        </div>
+        <div class="chat-input-area">
+            <form method="post" data-chat-form class="chat-form">
+                {% csrf_token %}
+                <textarea name="body" data-chat-input rows="2" placeholder="Type a message..." required class="chat-input"></textarea>
+                <button type="submit" class="button button-primary chat-send-btn">Send</button>
+            </form>
+            <p class="field-help chat-help">Only participants can see this thread. Linked to listing #{{ conversation.item.pk }}. Messages persisted to PostgreSQL, real-time via Redis.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/pages/conversation_detail.js' %}"></script>
+<script src="{% static 'js/chat.js' %}"></script>
+{% endblock %}

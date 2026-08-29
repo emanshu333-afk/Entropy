@@ -1,28 +1,46 @@
 {% extends 'bunkloop/base.html' %}
+{% load static %}
 {% block title %}Login | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/login.css' %}">{% endblock %}
 {% block content %}
-<section class="page narrow-page">
-    <div class="eyebrow">Welcome back</div>
-    <h1>Log in</h1>
-    <form class="form-card" method="post">
-        {% csrf_token %}
-        {% if messages %}
-            {% for message in messages %}
-                <div class="form-errors">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-        <div class="form-grid">
-            <div class="field field-wide">
-                <label for="id_identifier">Email or registration ID</label>
-                <input id="id_identifier" name="identifier" type="text" required>
-            </div>
-            <div class="field field-wide">
-                <label for="id_password">Password</label>
-                <input id="id_password" name="password" type="password" required>
-            </div>
+<section class="page narrow-page auth-shell">
+    <div class="auth-card auth-card--split">
+        <div class="auth-visual">
+            <div class="eyebrow">Campus marketplace</div>
+            <h1>Welcome back to your student community.</h1>
+            <p>Buy, sell, and discover verified student listings near your campus.</p>
+            <ul class="auth-feature-list">
+                <li>Verified student access</li>
+                <li>Campus-specific listings</li>
+                <li>Secure onboarding</li>
+            </ul>
         </div>
-        <button class="button button-primary button-wide" type="submit">Log in</button>
-        <p class="helper-text">New here? <a href="{% url 'bunkloop:signup' %}">Create an account</a></p>
-    </form>
+        <div class="auth-panel">
+            <div class="eyebrow">Welcome back</div>
+            <h2>Log in</h2>
+            <form class="form-card auth-form" method="post">
+                {% csrf_token %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="form-errors">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+                <div class="form-grid">
+                    <div class="field field-wide">
+                        <label for="id_identifier">Email or registration ID</label>
+                        <input id="id_identifier" name="identifier" type="text" required>
+                    </div>
+                    <div class="field field-wide">
+                        <label for="id_password">Password</label>
+                        <input id="id_password" name="password" type="password" required>
+                    </div>
+                </div>
+                <button class="button button-primary button-wide" type="submit">Log in</button>
+                <p class="helper-text">New here? <a href="{% url 'bunkloop:signup' %}">Create an account</a></p>
+            </form>
+        </div>
+    </div>
 </section>
+{% block extra_js %}<script src="{% static 'js/pages/login.js' %}"></script>{% endblock %}
+
 {% endblock %}

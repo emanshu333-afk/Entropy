@@ -1,0 +1,56 @@
+{% extends "bunkloop/base.html" %}
+{% load static %}
+{% block title %}Terms & Conditions | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/terms.css' %}">{% endblock %}
+{% block content %}
+<section class="page narrow-page">
+    <div class="eyebrow">Legal</div>
+    <h1>Terms & Conditions</h1>
+    <p class="intro">Last updated: 29 Aug 2026. By using Bunkloop you agree to these terms.</p>
+
+    <div class="form-card" style="line-height:1.7;">
+        <h2 style="font-size:18px; margin-top:0;">1. Campus Marketplace</h2>
+        <p>Bunkloop is a university-scoped marketplace for students to list, browse, buy or rent items within their own university. Listings are visible only to students of the same university.</p>
+
+        <h2 style="font-size:18px; margin-top:24px;">2. Eligibility & Verification</h2>
+        <ul style="margin:8px 0 0 18px; color:var(--muted);">
+            <li>Only students with a valid university email domain (as configured for each University, e.g. <code>thapar.edu</code>) may register.</li>
+            <li>OTP verification via <code>sendotp.email</code> is required before an account is created. The verification state is stored server-side (session/cache) and the OTP code itself is never stored by Bunkloop.</li>
+            <li>Identity photo must be a live camera capture, not a gallery upload, and is used only for trust & safety.</li>
+        </ul>
+
+        <h2 style="font-size:18px; margin-top:24px;">3. Listings & Transactions</h2>
+        <ul style="margin:8px 0 0 18px; color:var(--muted);">
+            <li>Sellers may list items with title, category, price, listing type (selling/renting), condition and up to 4 live photos.</li>
+            <li>Buyers and sellers communicate via the in-app messaging system. Conversations are tied to a listing and isolated by university.</li>
+            <li>Checkout creates an Order with status flow: <code>pending → paid → confirmed → shipped → delivered → completed / cancelled</code>. Payments are currently mocked; real Razorpay/Stripe integration will be added.</li>
+            <li>Sellers may remove their own listings via <code>My items → Remove</code> or <code>Item detail → Remove Listing</code> unless protected orders exist.</li>
+        </ul>
+
+        <h2 style="font-size:18px; margin-top:24px;">4. Messaging</h2>
+        <p style="color:var(--muted);">Messages are persisted in PostgreSQL (source of truth) and delivered in real-time via WebSocket/Redis. Rate limits (default 30/min) and validation (max 5000 chars) apply. University isolation is enforced — you can only message sellers from your university.</p>
+
+        <h2 style="font-size:18px; margin-top:24px;">5. Privacy & Data</h2>
+        <ul style="margin:8px 0 0 18px; color:var(--muted);">
+            <li>We store only necessary profile data (name, university, email, contact, etc.) and never expose your <code>otp_email_key</code> or OTP codes to the frontend, logs, or Git.</li>
+            <li>Media is stored under <code>/media/</code> (or S3 in production). Cookies are used for session, CSRF, and consent.</li>
+        </ul>
+
+        <h2 style="font-size:18px; margin-top:24px;">6. Cookies</h2>
+        <p style="color:var(--muted);">We use essential cookies for authentication and a consent banner on the home screen. You may accept or ask me later; the banner will reappear on next home visit until you accept. See our cookie banner for choices.</p>
+
+        <h2 style="font-size:18px; margin-top:24px;">7. Acceptable Use</h2>
+        <p style="color:var(--muted);">Do not list prohibited, illegal, or misleading items. Do not spam messaging. We may moderate or remove listings and suspend accounts for violations.</p>
+
+        <h2 style="font-size:18px; margin-top:24px;">8. Changes</h2>
+        <p style="color:var(--muted);">We may update these terms. Continued use after changes constitutes acceptance. For questions contact support via the in-app contact seller flow.</p>
+
+        <div style="margin-top:28px; display:flex; gap:12px;">
+            <a href="{% url 'bunkloop:home' %}" class="button button-primary">Back to Home</a>
+            <a href="{% url 'bunkloop:home' %}" class="button button-secondary">Browse marketplace</a>
+        </div>
+    </div>
+</section>
+{% block extra_js %}<script src="{% static 'js/pages/terms.js' %}"></script>{% endblock %}
+
+{% endblock %}

@@ -1,103 +1,167 @@
 {% extends "bunkloop/base.html" %}
 {% load static %}
 {% block title %}Create your profile | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/signup.css' %}">{% endblock %}
 {% block content %}
-<section class="page narrow-page">
-    <div class="eyebrow">Join your student community</div>
-    <h1>Create your profile</h1>
-    <p class="intro">A few details help people know they are buying from someone nearby.</p>
-    <form class="form-card" method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {% if form.non_field_errors %}
-            <div class="form-errors">{{ form.non_field_errors }}</div>
-        {% endif %}
-        <div class="form-grid">
-            <div class="field field-wide">
-                <label for="id_full_name">Full name</label>
-                <input id="id_full_name" name="full_name" type="text" autocomplete="name" required>
-            </div>
-            <div class="field">
-                <label for="id_registration_id">Registration ID</label>
-                <input id="id_registration_id" name="registration_id" type="text" required>
-            </div>
-            <div class="field">
-                <label for="id_university">University</label>
-                <select id="id_university" name="university" required>
-                    <option value="">Choose university</option>
-                    {% for university in universities %}
-                        <option value="{{ university.pk }}">{{ university.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="field field-wide">
-                <label for="id_gender">Profile image</label>
-                <div class="pfp-grid" data-pfp-grid>
-                    {% for gender_key, images in profile_image_options.items %}
-                        <div class="pfp-group" data-pfp-group="{{ gender_key }}" hidden>
-                            {% for image in images %}
-                                <label class="pfp-option">
-                                    <input type="radio" name="profile_image" value="{{ image.id }}" data-pfp-gender="{{ gender_key }}">
-                                    <span class="pfp-preview"><img src="{% if image.image %}{{ image.image.url }}{% else %}{{ image.image_url }}{% endif %}" alt="{{ image.name }}"></span>
-                                    <span>{{ image.name }}</span>
-                                </label>
-                            {% empty %}
-                                <span class="field-help">No profile photos available for this gender yet.</span>
+<section class="page narrow-page auth-shell">
+    <div class="auth-card auth-card--split">
+        <div class="auth-visual">
+            <div class="eyebrow">Join your campus</div>
+            <h1>Build trust before your profile goes live.</h1>
+            <p>We verify your student identity and email before activating your account.</p>
+            <ul class="auth-feature-list">
+                <li>University email validation</li>
+                <li>OTP verification</li>
+                <li>Camera-based identity check</li>
+            </ul>
+        </div>
+        <div class="auth-panel">
+            <div class="eyebrow">Create your profile</div>
+            <h2>Student sign up</h2>
+            <p class="intro">A few details help people know they are buying from someone nearby.</p>
+            <form id="signup-form" class="form-card auth-form" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {% if form.errors %}
+                    <div class="form-errors">
+                        <ul style="margin:0; padding-left:18px;">
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                            {% for error in form.non_field_errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% elif form.non_field_errors %}
+                    <div class="form-errors">{{ form.non_field_errors }}</div>
+                {% endif %}
+                <div class="form-grid">
+                    <div class="field field-wide">
+                        <label for="id_full_name">Full name</label>
+                        <input id="id_full_name" name="full_name" type="text" autocomplete="name" required value="{{ form.full_name.value|default:'' }}">
+                        {% if form.full_name.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.full_name.errors }}</div>{% endif %}
+                    </div>
+                    <div class="field">
+                        <label for="id_registration_id">Registration ID</label>
+                        <input id="id_registration_id" name="registration_id" type="text" required value="{{ form.registration_id.value|default:'' }}">
+                        {% if form.registration_id.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.registration_id.errors }}</div>{% endif %}
+                    </div>
+                    <div class="field">
+                        <label for="id_university">University</label>
+                        <select id="id_university" name="university" required>
+                            <option value="">Choose university</option>
+                            {% for university in universities %}
+                                <option value="{{ university.pk }}" data-domains="{{ university.domains|join:', ' }}" {% if form.university.value == university.pk|stringformat:"s" %}selected{% endif %}>{% if university.domains %}{{ university.name }} — {{ university.domains|join:', ' }}{% else %}{{ university.name }}{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                        <span class="field-help" data-university-domains-help>Select your university to see allowed email domains.</span>
+                        {% if form.university.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.university.errors }}</div>{% endif %}
+                    </div>
+                    <div class="field field-wide">
+                        <label for="id_gender">Profile image</label>
+                        <div class="pfp-grid" data-pfp-grid>
+                            {% for gender_key, images in profile_image_options.items %}
+                                <div class="pfp-group" data-pfp-group="{{ gender_key }}" hidden>
+                                    {% for image in images %}
+                                        <label class="pfp-option">
+                                            <input type="radio" name="profile_image" value="{{ image.id }}" data-pfp-gender="{{ gender_key }}">
+                                            <span class="pfp-preview"><img src="{% if image.image %}{{ image.image.url }}{% else %}{{ image.image_url }}{% endif %}" alt="{{ image.name }}"></span>
+                                            <span>{{ image.name }}</span>
+                                        </label>
+                                    {% empty %}
+                                        <span class="field-help">No profile photos available for this gender yet.</span>
+                                    {% endfor %}
+                                </div>
                             {% endfor %}
                         </div>
-                    {% endfor %}
+                        <span class="field-help">Choose a profile image after selecting your gender.</span>
+                    </div>
+                    <div class="field">
+                        <label for="id_contact_number">Contact number</label>
+                        <input id="id_contact_number" name="contact_number" type="tel" autocomplete="tel" required value="{{ form.contact_number.value|default:'' }}">
+                        {% if form.contact_number.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.contact_number.errors }}</div>{% endif %}
+                    </div>
+                    <div class="field">
+                        <label for="id_student_type">Student type</label>
+                        <select id="id_student_type" name="student_type" required>
+                            <option value="">Choose student type</option>
+                            <option value="hosteler">Hosteler</option>
+                            <option value="day_scholar">Day scholar</option>
+                            <option value="pg">PG</option>
+                        </select>
+                    </div>
+                    <div class="field field-wide hostel-field" data-hostel-field hidden>
+                        <label for="id_hostel">Hostel</label>
+                        <select id="id_hostel" name="hostel">
+                            <option value="">Choose hostel</option>
+                            {% for hostel in hostels %}
+                                <option value="{{ hostel.pk }}" {% if form.hostel.value == hostel.pk|stringformat:"s" %}selected{% endif %}>{{ hostel.name }} ({{ hostel.university.name }})</option>
+                            {% endfor %}
+                        </select>
+                        <span class="field-help">Required for hostel residents.</span>
+                        {% if form.hostel.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.hostel.errors }}</div>{% endif %}
+                    </div>
+                    <div class="field field-wide">
+                        <label for="id_email">Student email</label>
+                        <div style="display:flex; gap:8px;">
+                            <input id="id_email" name="email" type="email" autocomplete="email" required value="{{ form.email.value|default:'' }}" style="flex:1;">
+                            <button type="button" class="button button-secondary" data-send-otp style="white-space:nowrap;">Send OTP</button>
+                        </div>
+                        <span class="field-help" data-email-domains-help>Use your university email domain for verification.</span>
+                        <div data-otp-status style="margin-top:8px; font-size:13px;"></div>
+                        {% if form.email.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.email.errors }}</div>{% endif %}
+                    </div>
+                    <div class="field field-wide" data-verify-section hidden>
+                        <label for="id_otp_api">Enter OTP</label>
+                        <div style="display:flex; gap:8px;">
+                            <input id="id_otp_api" data-otp-input type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit code" style="flex:1;">
+                            <button type="button" class="button button-primary" data-verify-otp>Verify</button>
+                            <button type="button" class="button button-secondary" data-resend-otp>Resend</button>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="id_password">Password</label>
+                        <input id="id_password" name="password" type="password" autocomplete="new-password" required>
+                    </div>
+                    <div class="field">
+                        <label for="id_confirm_password">Confirm password</label>
+                        <input id="id_confirm_password" name="confirm_password" type="password" autocomplete="new-password" required>
+                    </div>
+                    <div class="field field-wide">
+                        <label for="id_identity_photo">Identity photo</label>
+                        <input id="id_identity_photo" name="identity_photo" type="file" accept="image/*" capture="environment" required>
+                        <span class="field-help">Capture a live photo from your camera device for verification.</span>
+                        {% if form.identity_photo.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.identity_photo.errors }}</div>{% endif %}
+                    </div>
+                    <div class="field">
+                        <label for="id_gender">Gender</label>
+                        <select id="id_gender" name="gender" required>
+                            <option value="">Choose gender</option>
+                            <option value="female">Female</option>
+                            <option value="male">Male</option>
+                            <option value="non_binary">Non-binary</option>
+                            <option value="other">Other</option>
+                            <option value="prefer_not_to_say">Prefer not to say</option>
+                        </select>
+                    </div>
+                    <div class="field field-wide">
+                        <label style="display:flex; gap:8px; align-items:center; font-weight:400; font-size:13px;">
+                            <input type="checkbox" name="agree_tnd" required style="width:auto; min-height:auto; accent-color:var(--coral);">
+                            <span>I agree to the <a href="{% url 'bunkloop:terms' %}" target="_blank" style="color:var(--coral); text-decoration:underline;">Terms &amp; Conditions</a></span>
+                        </label>
+                    </div>
                 </div>
-                <span class="field-help">Choose a profile image after selecting your gender.</span>
-            </div>
-            <div class="field">
-                <label for="id_contact_number">Contact number</label>
-                <input id="id_contact_number" name="contact_number" type="tel" autocomplete="tel" required>
-            </div>
-            <div class="field">
-                <label for="id_student_type">Student type</label>
-                <select id="id_student_type" name="student_type" required>
-                    <option value="">Choose student type</option>
-                    <option value="hosteler">Hosteler</option>
-                    <option value="day_scholar">Day scholar</option>
-                </select>
-            </div>
-            <div class="field field-wide hostel-field" data-hostel-field hidden>
-                <label for="id_hostel">Hostel</label>
-                <select id="id_hostel" name="hostel">
-                    <option value="">Choose hostel</option>
-                    {% for hostel in hostels %}
-                        <option value="{{ hostel.pk }}">{{ hostel.name }} ({{ hostel.university.name }})</option>
-                    {% endfor %}
-                </select>
-                <span class="field-help">Required for hostel residents.</span>
-            </div>
-            <div class="field">
-                <label for="id_email">Email</label>
-                <input id="id_email" name="email" type="email" autocomplete="email" required>
-            </div>
-            <div class="field">
-                <label for="id_password">Password</label>
-                <input id="id_password" name="password" type="password" autocomplete="new-password" required>
-            </div>
-            <div class="field">
-                <label for="id_confirm_password">Confirm password</label>
-                <input id="id_confirm_password" name="confirm_password" type="password" autocomplete="new-password" required>
-            </div>
-            <div class="field">
-                <label for="id_gender">Gender</label>
-                <select id="id_gender" name="gender" required>
-                    <option value="">Choose gender</option>
-                    <option value="female">Female</option>
-                    <option value="male">Male</option>
-                    <option value="non_binary">Non-binary</option>
-                    <option value="other">Other</option>
-                    <option value="prefer_not_to_say">Prefer not to say</option>
-                </select>
-            </div>
+                <button id="signup-submit" class="button button-primary button-wide" type="submit">Continue to email verification</button>
+                <p class="field-help" style="text-align:center; margin-top:8px;">Or use <em>Send OTP → Verify</em> above to verify first, then submit. Link stays same, WSGI sends JSON, JS updates HTML.</p>
+                <p class="helper-text">Already have an account? <a href="{% url 'bunkloop:login' %}">Log in</a></p>
+            </form>
         </div>
-        <button class="button button-primary button-wide" type="submit">Create profile</button>
-    </form>
+    </div>
 </section>
 {% endblock %}
-{% block extra_js %}
+{% block extra_js %}<script src="{% static 'js/pages/signup.js' %}"></script>
     <script src="{% static 'js/item_form.js' %}"></script>
+    <script src="{% static 'js/auth_otp.js' %}"></script>
 {% endblock %}

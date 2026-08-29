@@ -1,0 +1,84 @@
+/* UTF-8 — login.css — per-page styles for login.html */
+@charset "UTF-8";
+
+.auth-shell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 120px);
+}
+
+
+.auth-card {
+    display: grid;
+    grid-template-columns: 1.05fr 1.3fr;
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+
+.auth-visual {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+    padding: clamp(28px, 4vw, 42px);
+    background: linear-gradient(rgba(255, 242, 237, 0.82), rgba(255, 250, 247, 0.88)), url('../images/login-bg.jpeg') center/cover no-repeat;
+    position: relative;
+    overflow: hidden;
+}
+
+
+.auth-panel h2 {
+    font-size: clamp(28px, 3vw, 42px);
+    line-height: 1.08;
+}
+
+
+.auth-feature-list {
+    display: grid;
+    gap: 10px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    color: var(--muted);
+}
+
+
+.auth-form {
+    margin-top: 18px;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+
+.helper-text {
+    margin-top: 18px;
+    color: var(--muted);
+    text-align: center;
+}
+
+
+.eyebrow {
+    margin-bottom: 8px;
+    color: var(--coral);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+
+.intro {
+    max-width: 640px;
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 16px;
+}
+

@@ -1,0 +1,65 @@
+{% extends "bunkloop/base.html" %}
+{% load static %}
+{% block title %}Universities & Domains | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/universities.css' %}">{% endblock %}
+{% block content %}
+<section class="page">
+    <div class="browse-heading">
+        <div>
+            <div class="eyebrow">Trusted campuses</div>
+            <h1>Universities & allowed email domains</h1>
+            <p class="intro">Each university now stores its own allowed email domains. Signup is validated against this list — visible here for transparency and managed via admin.</p>
+        </div>
+        <a class="button button-secondary" href="{% url 'bunkloop:signup' %}">Create account</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="form-errors">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div style="margin-top:28px; display:grid; gap:16px;">
+        {% for uni in universities %}
+            <div style="border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:20px; box-shadow:var(--shadow);">
+                <div style="display:flex; justify-content:space-between; gap:16px; align-items:start; flex-wrap:wrap;">
+                    <div>
+                        <h3 style="font-size:18px;">{{ uni.name }}</h3>
+                        <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                            {% if uni.domains %}
+                                {% for d in uni.domains %}
+                                    <span style="padding:4px 10px; border-radius:999px; background:var(--coral-soft); color:var(--coral-dark); font-size:12px; font-weight:600;">@{{ d }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span style="padding:4px 10px; border-radius:999px; background:#f1f0eb; color:var(--muted); font-size:12px;">No explicit domains — allows any <code>.edu</code> / <code>.ac.</code> / <code>university</code></span>
+                            {% endif %}
+                        </div>
+                        <div style="margin-top:10px; color:var(--muted); font-size:13px;">
+                            {{ uni.hostels.count }} hostel{{ uni.hostels.count|pluralize }} · {{ uni.student_count }} student{{ uni.student_count|pluralize }}
+                            {% if uni.hostels.all %}
+                                — {% for h in uni.hostels.all %}{{ h.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div style="text-align:right; font-size:12px; color:var(--muted);">
+                        ID: {{ uni.pk }}<br>
+                        {{ uni.get_domains_display }}
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-state">
+                <h2>No universities yet</h2>
+                <p>Add universities via admin — each with its allowed email domains list.</p>
+                <a href="/admin/" class="button button-primary">Open admin</a>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div style="margin-top:28px; padding:16px; border-radius:8px; background:#fcfbf8; border:1px dashed var(--line); color:var(--muted); font-size:13px;">
+        <strong style="color:var(--ink);">How verification works:</strong> On signup, your selected university's <code>domains</code> list is checked first. Example: <code>Thapar University — thapar.edu</code> only allows <code>you@thapar.edu</code> or <code>you@mail.thapar.edu</code>. If a university has no domains, fallback to generic academic check (<code>.edu</code>, <code>.ac.</code>) + MX lookup. Denied public domains (<code>gmail.com</code> etc.) are always blocked. Manage domains at <code>/admin → Universities → Domains (comma-separated)</code>.
+    </div>
+</section>
+{% block extra_js %}<script src="{% static 'js/pages/universities.js' %}"></script>{% endblock %}
+
+{% endblock %}

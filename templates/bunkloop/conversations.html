@@ -1,0 +1,61 @@
+{% extends "bunkloop/base.html" %}
+{% load static %}
+{% block title %}Messages | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/conversations.css' %}">{% endblock %}
+{% block content %}
+<section class="page">
+    <div class="browse-heading">
+        <div>
+            <div class="eyebrow">Buyer–seller chat</div>
+            <h1>Messages</h1>
+            <p class="intro">All conversations linked to your listings.</p>
+        </div>
+    </div>
+    {% if messages %}
+        {% for message in messages %}
+            <div class="form-errors">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    <div style="display:grid; gap:12px; margin-top:32px;">
+        {% for conv in conversations %}
+            <a href="{% url 'bunkloop:conversation_detail' conv.pk %}" style="display:block; border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:16px; box-shadow:var(--shadow);">
+                <div style="display:flex; justify-content:space-between; gap:12px; align-items:start;">
+                    <div>
+                        <strong>{{ conv.item.title }}</strong>
+                        <div style="color:var(--muted); font-size:13px; margin-top:4px;">
+                            {% if conv.buyer_id == current_user.id %}
+                                Seller: {{ conv.seller.full_name }} ({{ conv.seller.registration_id }})
+                            {% else %}
+                                Buyer: {{ conv.buyer.full_name }} ({{ conv.buyer.registration_id }})
+                            {% endif %}
+                            · {{ conv.item.category.name }} · ₹{{ conv.item.price }}
+                        </div>
+                        {% if conv.last_message %}
+                            <div style="margin-top:8px; font-size:14px; color:var(--ink);">
+                                <span style="color:var(--muted);">{{ conv.last_message.sender.full_name }}:</span> {{ conv.last_message.body|truncatechars:80 }}
+                            </div>
+                            <div style="color:var(--muted); font-size:11px; margin-top:4px;">{{ conv.last_message.created_at|timesince }} ago</div>
+                        {% else %}
+                            <div style="margin-top:8px; font-size:13px; color:var(--muted);">No messages yet — say hi!</div>
+                        {% endif %}
+                    </div>
+                    <div style="text-align:right;">
+                        {% if conv.unread_count %}
+                            <span style="background:var(--coral); color:#fff; padding:4px 8px; border-radius:999px; font-size:12px; font-weight:700;">{{ conv.unread_count }} new</span>
+                        {% endif %}
+                        <div style="color:var(--muted); font-size:11px; margin-top:6px;">Updated {{ conv.updated_at|timesince }} ago</div>
+                    </div>
+                </div>
+            </a>
+        {% empty %}
+            <div class="empty-state">
+                <h2>No conversations yet</h2>
+                <p>Start a chat from any item page to talk to a buyer or seller.</p>
+                <a href="{% url 'bunkloop:home' %}" class="button button-primary">Browse items</a>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% block extra_js %}<script src="{% static 'js/pages/conversations.js' %}"></script>{% endblock %}
+
+{% endblock %}

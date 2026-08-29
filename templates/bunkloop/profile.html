@@ -1,17 +1,28 @@
 {% extends 'bunkloop/base.html' %}
+{% load static %}
 {% block title %}Profile | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/profile.css' %}">{% endblock %}
 {% block content %}
 <section class="page narrow-page">
     <div class="eyebrow">Your student profile</div>
     <h1>{{ user.full_name }}</h1>
     <div class="form-card">
+        <div style="display:flex; gap:16px; align-items:center; margin:18px 0;">
+            {% if user.profile_image %}
+                <img src="{% if user.profile_image.image %}{{ user.profile_image.image.url }}{% else %}{{ user.profile_image.image_url }}{% endif %}" alt="{{ user.profile_image.name }}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid var(--line);">
+            {% endif %}
+            <span style="padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700; background:{% if user.email_verified %}var(--mint); color:#1a6b46;{% else %}#fde8e8; color:#8d2d20;{% endif %}">{% if user.email_verified %}✓ Email verified{% else %}✗ Not verified{% endif %}</span>
+        </div>
         <dl class="detail-list">
+            <div><dt>Full name</dt><dd>{{ user.full_name }}</dd></div>
             <div><dt>Registration ID</dt><dd>{{ user.registration_id }}</dd></div>
-            <div><dt>Email</dt><dd>{{ user.email }}</dd></div>
-            <div><dt>University</dt><dd>{{ user.university.name|default:'Not set' }}</dd></div>
+            <div><dt>Email</dt><dd>{{ user.email }} {% if user.email_verified %}<span style="color:#1a6b46; font-size:11px;">(verified)</span>{% endif %}</dd></div>
+            <div><dt>Gender</dt><dd>{{ user.gender|default:'Not set'|title }}</dd></div>
+            <div><dt>University</dt><dd>{{ user.university.name|default:'Not set' }} {% if user.university and user.university.domains %}<br><span style="color:var(--muted); font-size:11px;">Allowed: {{ user.university.get_domains_display }}</span>{% endif %}</dd></div>
             <div><dt>Student type</dt><dd>{{ user.student_type|title }}</dd></div>
             <div><dt>Hostel</dt><dd>{{ user.hostel.name|default:'Not assigned' }}</dd></div>
             <div><dt>Contact</dt><dd>{{ user.contact_number|default:'Not provided' }}</dd></div>
+            <div><dt>Identity photo</dt><dd>{% if user.identity_photo %}<a href="{{ user.identity_photo.url }}" target="_blank" style="color:var(--coral);">View verified photo</a>{% else %}Not provided{% endif %}</dd></div>
         </dl>
         <div class="profile-actions">
             <a class="button button-primary" href="{% url 'bunkloop:home' %}">Back to marketplace</a>
@@ -23,4 +34,6 @@
         </div>
     </div>
 </section>
+{% block extra_js %}<script src="{% static 'js/pages/profile.js' %}"></script>{% endblock %}
+
 {% endblock %}

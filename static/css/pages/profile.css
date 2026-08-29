@@ -1,0 +1,10 @@
+/* UTF-8 — profile.css — per-page styles for profile.html */
+@charset "UTF-8";
+
+.profile-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 24px;
+}
+

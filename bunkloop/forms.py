@@ -1,7 +1,65 @@
+import re
+from urllib.parse import urlparse
+
+import dns.resolver
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
+from email_validator import EmailNotValidError, validate_email
 
 from .models import Hostel, Item, ItemCategory, ProfileImage, University, User
+
+
+def _is_domain_in_university_allowlist(domain: str) -> bool:
+    """Check if domain matches any University's configured domains list.
+    Empty domains list means no explicit allowlist — fallback to generic check.
+    Supports subdomain matching (e.g., mail.thapar.edu matches thapar.edu).
+    """
+    domain = domain.strip().lower()
+    # University table is small, loop in Python for SQLite/Postgres portability
+    # (JSON containment queries differ across backends)
+    for uni in University.objects.all():
+        if uni.domains and uni.is_domain_allowed(domain):
+            return True
+    return False
+
+
+def validate_student_email(email):
+    try:
+        validated = validate_email(email, check_deliverability=True)
+        normalized_email = validated.email
+    except EmailNotValidError:
+        raise ValidationError('Please enter a valid email address.')
+
+    domain = normalized_email.split('@')[-1].lower()
+    if not domain or '.' not in domain:
+        raise ValidationError('Please enter a valid university email domain.')
+
+    denied_domains = set(getattr(settings, 'ALLOWED_EMAIL_DENIED_DOMAINS', ['gmail.com','yahoo.com','outlook.com','hotmail.com','icloud.com','aol.com']))
+    if domain in denied_domains:
+        raise ValidationError('Please use a valid university or student email address.')
+
+    # If domain is explicitly allowed by any University's domains list, accept immediately (after MX check)
+    in_allowlist = _is_domain_in_university_allowlist(domain)
+
+    if not in_allowlist:
+        academic_suffixes = getattr(settings, 'ALLOWED_ACADEMIC_SUFFIXES', ['.edu','.ac.','university','edu.'])
+        # Check if any suffix matches (supports .edu endswith or substring)
+        is_academic = any(
+            (suf.startswith('.') and domain.endswith(suf)) or (suf in domain)
+            for suf in academic_suffixes
+        )
+        if not is_academic:
+            raise ValidationError('Only university or academic student email domains are allowed. If your university uses a custom domain, ask admin to add it to the University domains list.')
+
+    try:
+        answers = dns.resolver.resolve(domain, 'MX')
+        if not answers:
+            raise ValidationError('This email domain could not be verified.')
+    except Exception:
+        raise ValidationError('This email domain could not be verified. Please use a valid student email.')
+
+    return normalized_email
 
 
 class UserProfileForm(forms.ModelForm):
@@ -10,6 +68,7 @@ class UserProfileForm(forms.ModelForm):
     university = forms.ModelChoiceField(queryset=University.objects.none(), required=True, empty_label='Choose university')
     hostel = forms.ModelChoiceField(queryset=Hostel.objects.none(), required=False, empty_label='Choose hostel')
     gender = forms.CharField(required=False)
+    identity_photo = forms.ImageField(required=True, widget=forms.ClearableFileInput(attrs={'accept': 'image/*', 'capture': 'environment'}))
     profile_image = forms.ModelChoiceField(
         queryset=ProfileImage.objects.all(),
         required=False,
@@ -37,6 +96,12 @@ class UserProfileForm(forms.ModelForm):
         self.fields['hostel'].queryset = Hostel.objects.select_related('university').order_by('university__name', 'name')
         self.fields['hostel'].required = False
         self.fields['profile_image'].required = False
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip()
+        if not email:
+            raise ValidationError('Email is required.')
+        return validate_student_email(email)
 
     def clean_gender(self):
         gender = (self.cleaned_data.get('gender') or '').strip()
@@ -80,6 +145,19 @@ class UserProfileForm(forms.ModelForm):
         if password and confirm_password and password != confirm_password:
             self.add_error('confirm_password', 'Passwords do not match.')
 
+        if cleaned_data.get('identity_photo') is None:
+            self.add_error('identity_photo', 'A live camera photo is required for registration.')
+
+        # Enforce university domain allowlist if configured
+        university = cleaned_data.get('university')
+        email = cleaned_data.get('email')
+        if university and email:
+            domain = email.split('@')[-1].lower()
+            # If this university has explicit domains, email must match one of them
+            if university.domains and not university.is_domain_allowed(domain):
+                self.add_error('email', f'This email domain is not allowed for {university.name}. Allowed domains: {", ".join(university.domains)}')
+            # Also check general allowlist vs denied (already in validate_student_email) — no extra action here
+
         return cleaned_data
 
     def save(self, commit=True):
@@ -91,6 +169,8 @@ class UserProfileForm(forms.ModelForm):
         user.university = university
         user.hostel = hostel
         user.gender = gender or ''
+        user.identity_photo = self.cleaned_data.get('identity_photo')
+        user.email_verified = True
         user.set_password(self.cleaned_data['password'])
         if commit:
             user.save()

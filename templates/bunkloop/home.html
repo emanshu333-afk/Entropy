@@ -1,5 +1,7 @@
 {% extends "bunkloop/base.html" %}
+{% load static %}
 {% block title %}Browse marketplace | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/home.css' %}">{% endblock %}
 {% block content %}
 <section class="page browse-page">
     <div class="browse-heading">
@@ -10,18 +12,24 @@
         </div>
         <a class="button button-primary" href="{% url 'bunkloop:item_create' %}">+ Post an item</a>
     </div>
-    <div class="browse-toolbar">
+    <form class="browse-toolbar" method="get" action="{% url 'bunkloop:home' %}">
         <label class="search-field">
             <span aria-hidden="true">⌕</span>
-            <input type="search" name="q" placeholder="Search items..." aria-label="Search items">
+            <input type="search" name="q" value="{{ q }}" placeholder="Search items..." aria-label="Search items">
         </label>
         <div class="filter-chips" aria-label="Filter listings">
-            <button class="chip active" type="button">All items</button>
+            <a href="{% url 'bunkloop:home' %}{% if q %}?q={{ q }}{% endif %}" class="chip {% if not active_category %}active{% endif %}">All items</a>
             {% for category in categories %}
-                <button class="chip" type="button">{{ category.name }}</button>
+                <a href="{% url 'bunkloop:home' %}?{% if q %}q={{ q }}&{% endif %}category={{ category.pk }}" class="chip {% if active_category and active_category.pk == category.pk %}active{% endif %}">{{ category.name }}</a>
             {% endfor %}
         </div>
-    </div>
+        <button type="submit" class="button button-small button-secondary home-search-btn">Search</button>
+    </form>
+    {% if q or active_category %}
+        <div class="home-filter-status">
+            Showing {% if q %}results for "<strong>{{ q }}</strong>"{% endif %} {% if active_category %}in <strong>{{ active_category.name }}</strong>{% endif %} — <a href="{% url 'bunkloop:home' %}" class="home-clear-link">Clear filters</a>
+        </div>
+    {% endif %}
     <div class="results-heading">
         <h2>Fresh on campus</h2>
         <span>{{ listings|length }} available item{{ listings|length|pluralize }}</span>
@@ -48,3 +56,4 @@
     </div>
 </section>
 {% endblock %}
+{% block extra_js %}<script src="{% static 'js/pages/home.js' %}"></script>{% endblock %}

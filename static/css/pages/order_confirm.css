@@ -1,0 +1,62 @@
+/* UTF-8 — order_confirm.css — per-page styles for order_confirm.html */
+@charset "UTF-8";
+
+.detail-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+    gap: clamp(28px, 5vw, 64px);
+    width: min(1080px, 100%);
+    margin: 0 auto;
+    padding: 52px clamp(20px, 5vw, 72px) 80px;
+}
+
+
+.detail-gallery {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-content: start;
+}
+
+
+.detail-image {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 6px;
+    background: var(--mint);
+}
+
+
+.detail-body {
+    align-self: start;
+    padding-top: 8px;
+}
+
+
+.price-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 24px 0;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+}
+
+
+.detail-description {
+    color: var(--muted);
+}
+
+
+.detail-list {
+    display: grid;
+    gap: 14px;
+    margin: 28px 0;
+    padding: 20px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+

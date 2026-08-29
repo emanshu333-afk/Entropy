@@ -1,0 +1,67 @@
+{% extends "bunkloop/base.html" %}
+{% load static %}
+{% block title %}Order #{{ order.pk }} | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/order_detail.css' %}">{% endblock %}
+{% block content %}
+<section class="page narrow-page">
+    <a href="{% url 'bunkloop:order_list' %}" style="color:var(--muted); font-size:13px;">← Back to orders</a>
+    {% if messages %}
+        {% for message in messages %}
+            <div class="form-errors" style="margin-top:12px;">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    <div class="form-card">
+        <div class="eyebrow">Order #{{ order.pk }} · {{ order.created_at|date:"j M Y, g:i a" }}</div>
+        <h1>{{ order.item.title }}</h1>
+        <div style="display:grid; gap:6px; margin-top:12px; color:var(--muted); font-size:13px;">
+            <div>Buyer: <strong style="color:var(--ink);">{{ order.buyer.full_name }}</strong> ({{ order.buyer.registration_id }})</div>
+            <div>Seller: <strong style="color:var(--ink);">{{ order.seller.full_name }}</strong> ({{ order.seller.registration_id }})</div>
+            <div>University: {{ order.seller.university.name }}</div>
+        </div>
+        <div style="margin-top:20px; padding:16px; border:1px solid var(--line); border-radius:8px; background:#fcfbf8; display:grid; gap:8px;">
+            <div style="display:flex; justify-content:space-between;"><span>Amount</span><strong>₹{{ order.amount }}</strong></div>
+            <div style="display:flex; justify-content:space-between;"><span>Listing type</span><span>{{ order.listing_type }}</span></div>
+            <div style="display:flex; justify-content:space-between;"><span>Status</span><span style="padding:2px 8px; border-radius:999px; background:var(--coral-soft); font-weight:700;">{{ order.status }}</span></div>
+            <div style="display:flex; justify-content:space-between;"><span>Payment</span><span>{{ order.payment_status }} {% if order.payment_reference %}· {{ order.payment_reference }}{% endif %}</span></div>
+            <div style="display:flex; justify-content:space-between;"><span>Provider</span><span>{{ order.provider }}</span></div>
+        </div>
+
+        <div style="margin-top:20px;">
+            <h3 style="font-size:15px; margin-bottom:10px;">Update status — auditable, role-restricted</h3>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                {% if current_user.pk == order.seller_id %}
+                    {% if order.status == 'paid' %}
+                        <form method="post" action="{% url 'bunkloop:order_update_status' order.pk %}">{% csrf_token %}<input type="hidden" name="status" value="confirmed"><button class="button button-primary button-small">Confirm order</button></form>
+                        <form method="post" action="{% url 'bunkloop:order_update_status' order.pk %}">{% csrf_token %}<input type="hidden" name="status" value="cancelled"><button class="button button-secondary button-small">Cancel</button></form>
+                    {% elif order.status == 'confirmed' %}
+                        <form method="post" action="{% url 'bunkloop:order_update_status' order.pk %}">{% csrf_token %}<input type="hidden" name="status" value="shipped"><button class="button button-primary button-small">Mark shipped</button></form>
+                        <form method="post" action="{% url 'bunkloop:order_update_status' order.pk %}">{% csrf_token %}<input type="hidden" name="status" value="cancelled"><button class="button button-secondary button-small">Cancel</button></form>
+                    {% elif order.status == 'shipped' %}
+                        <form method="post" action="{% url 'bunkloop:order_update_status' order.pk %}">{% csrf_token %}<input type="hidden" name="status" value="delivered"><button class="button button-primary button-small">Mark delivered</button></form>
+                    {% else %}
+                        <span class="field-help">No seller actions for status <code>{{ order.status }}</code></span>
+                    {% endif %}
+                {% elif current_user.pk == order.buyer_id %}
+                    {% if order.status == 'delivered' %}
+                        <form method="post" action="{% url 'bunkloop:order_update_status' order.pk %}">{% csrf_token %}<input type="hidden" name="status" value="completed"><button class="button button-primary button-small">Confirm completion</button></form>
+                    {% endif %}
+                    {% if order.status in "pending paid confirmed" or order.status == "pending" %}
+                        {% if order.status != 'completed' and order.status != 'cancelled' and order.status != 'delivered' %}
+                            <form method="post" action="{% url 'bunkloop:order_update_status' order.pk %}">{% csrf_token %}<input type="hidden" name="status" value="cancelled"><button class="button button-secondary button-small">Cancel order</button></form>
+                        {% endif %}
+                    {% endif %}
+                    {% if order.status not in "paid confirmed shipped delivered" and order.status != "delivered" and order.status != "paid" %}<span class="field-help">Waiting for seller.</span>{% endif %}
+                {% endif %}
+            </div>
+            <p class="field-help" style="margin-top:8px;">Flow: pending → paid → confirmed → shipped → delivered → completed. Cancel allowed before delivered. All changes are timestamped (<code>updated_at={{ order.updated_at|date:"j M Y g:i a" }}</code>).</p>
+        </div>
+
+        <div style="margin-top:24px; display:flex; gap:8px;">
+            <a href="{% url 'bunkloop:item_detail' order.item.pk %}" class="button button-secondary">View listing</a>
+            <a href="{% url 'bunkloop:conversation_list' %}" class="button button-secondary">Messages</a>
+        </div>
+    </div>
+</section>
+{% block extra_js %}<script src="{% static 'js/pages/order_detail.js' %}"></script>{% endblock %}
+
+{% endblock %}
