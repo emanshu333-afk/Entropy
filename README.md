@@ -11,10 +11,9 @@ This project is a Django-based campus marketplace for students to list, browse, 
 - Personal “My items” view for the seller
 - Item detail page with item metadata, seller contact, and gallery images
 - Selling/renting listing types with price handling built into the form
-- Basic Django tests covering profile fields and item image limits
-- Buyer-seller messaging and a basic payment/checkout flow for selling items
 
 ## What is pending / being added
+- Buyer-seller messaging and a basic payment/checkout flow for selling items
 - Real payment integration with a live gateway such as Razorpay or Stripe
 - Complete buyer-to-seller messaging system with persistent chat history and notifications
 - Checkout flow tied to a payment record and order status tracking
