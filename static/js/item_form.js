@@ -2,6 +2,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const studentType = document.querySelector("#id_student_type");
     const hostelField = document.querySelector("[data-hostel-field]");
     const hostelSelect = document.querySelector("#id_hostel");
+    const genderSelect = document.querySelector("#id_gender");
+    const pfpGroups = document.querySelectorAll("[data-pfp-group]");
     const listingTypeInputs = document.querySelectorAll("input[name='listing_type']");
     const priceLabel = document.querySelector("[data-price-label]");
     const photoInput = document.querySelector("#id_photos");
@@ -21,12 +23,51 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function updateProfileOptions() {
+        if (!genderSelect || !pfpGroups.length) {
+            return;
+        }
+
+        const genderValue = (genderSelect.value || '').toLowerCase();
+        const visibleGroups = new Set();
+
+        if (['male', 'female', 'other', 'prefer_not_to_say'].includes(genderValue)) {
+            visibleGroups.add(genderValue);
+            visibleGroups.add('non_binary');
+        } else if (genderValue === 'non_binary') {
+            visibleGroups.add('non_binary');
+        }
+
+        pfpGroups.forEach((group) => {
+            const groupKey = group.dataset.pfpGroup;
+            const shouldShow = visibleGroups.has(groupKey);
+            group.hidden = !shouldShow;
+        });
+
+        document.querySelectorAll("input[name='profile_image']").forEach((radio) => {
+            const isVisible = radio.dataset.pfpGender && visibleGroups.has(radio.dataset.pfpGender);
+            radio.checked = false;
+            radio.disabled = !isVisible;
+        });
+
+        if (!visibleGroups.size) {
+            return;
+        }
+
+        const firstAvailableRadio = document.querySelector(
+            `input[name='profile_image'][data-pfp-gender='${Array.from(visibleGroups)[0]}']`
+        );
+        if (firstAvailableRadio) {
+            firstAvailableRadio.checked = true;
+        }
+    }
+
     function updatePriceLabel() {
         if (!priceLabel) {
             return;
         }
         const selectedType = document.querySelector("input[name='listing_type']:checked")?.value;
-        priceLabel.textContent = selectedType === "rent" ? "Rent amount" : "Selling price";
+        priceLabel.textContent = selectedType === "renting" ? "Rent amount" : "Selling price";
     }
 
     function updatePhotoPreview() {
@@ -51,6 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     studentType?.addEventListener("change", updateHostelVisibility);
+    genderSelect?.addEventListener("change", updateProfileOptions);
     listingTypeInputs.forEach((input) => input.addEventListener("change", updatePriceLabel));
     photoInput?.addEventListener("change", updatePhotoPreview);
     form?.addEventListener("submit", (event) => {
@@ -65,6 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     updateHostelVisibility();
+    updateProfileOptions();
     updatePriceLabel();
     updatePhotoPreview();
 });

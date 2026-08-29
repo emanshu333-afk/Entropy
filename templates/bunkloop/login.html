@@ -1,0 +1,28 @@
+{% extends 'bunkloop/base.html' %}
+{% block title %}Login | Bunkloop{% endblock %}
+{% block content %}
+<section class="page narrow-page">
+    <div class="eyebrow">Welcome back</div>
+    <h1>Log in</h1>
+    <form class="form-card" method="post">
+        {% csrf_token %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="form-errors">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        <div class="form-grid">
+            <div class="field field-wide">
+                <label for="id_identifier">Email or registration ID</label>
+                <input id="id_identifier" name="identifier" type="text" required>
+            </div>
+            <div class="field field-wide">
+                <label for="id_password">Password</label>
+                <input id="id_password" name="password" type="password" required>
+            </div>
+        </div>
+        <button class="button button-primary button-wide" type="submit">Log in</button>
+        <p class="helper-text">New here? <a href="{% url 'bunkloop:signup' %}">Create an account</a></p>
+    </form>
+</section>
+{% endblock %}

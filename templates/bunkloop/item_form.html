@@ -13,29 +13,27 @@
         {% endif %}
         <div class="form-grid">
             <div class="field field-wide">
+                <label for="id_title">Item title</label>
+                <input id="id_title" name="title" type="text" maxlength="150" placeholder="e.g. Study table, AC, cycle..." required>
+            </div>
+            <div class="field field-wide">
                 <label for="id_category">Category</label>
                 <select id="id_category" name="category" required>
                     <option value="">Choose a category</option>
-                    <option>Books and Notes</option>
-                    <option>Electronics</option>
-                    <option>Cycles and Transport</option>
-                    <option>Furniture</option>
-                    <option>Appliances</option>
-                    <option>Clothing and Accessories</option>
-                    <option>Sports and Fitness</option>
-                    <option>Room Essentials</option>
-                    <option>Other</option>
+                    {% for category in categories %}
+                        <option value="{{ category.pk }}">{{ category.name }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <fieldset class="field field-wide listing-type-field">
                 <legend>Listing type</legend>
                 <div class="choice-group">
                     <label class="choice-card">
-                        <input type="radio" name="listing_type" value="sell" checked>
+                        <input type="radio" name="listing_type" value="selling" checked>
                         <span><strong>Sell</strong><small>One-time price</small></span>
                     </label>
                     <label class="choice-card">
-                        <input type="radio" name="listing_type" value="rent">
+                        <input type="radio" name="listing_type" value="renting">
                         <span><strong>Rent</strong><small>Temporary use</small></span>
                     </label>
                 </div>
@@ -48,11 +46,11 @@
                 <label for="id_condition">Condition</label>
                 <select id="id_condition" name="condition" required>
                     <option value="">Choose condition</option>
-                    <option>New</option>
-                    <option>Like New</option>
-                    <option>Good</option>
-                    <option>Fair</option>
-                    <option>Needs Repair</option>
+                    <option value="new">New</option>
+                    <option value="like_new">Like New</option>
+                    <option value="good">Good</option>
+                    <option value="fair">Fair</option>
+                    <option value="needs_repair">Needs Repair</option>
                 </select>
             </div>
             <div class="field field-wide">

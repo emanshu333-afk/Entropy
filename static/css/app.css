@@ -69,19 +69,18 @@ textarea {
 .brand {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 19px;
-    font-weight: 700;
+    justify-content: center;
+    min-width: 0;
+    line-height: 1;
 }
 
-.brand-mark {
-    display: grid;
-    width: 32px;
-    height: 32px;
-    place-items: center;
-    border-radius: 8px;
-    color: #fff;
-    background: var(--coral);
+.brand-logo {
+    display: block;
+    width: clamp(44px, 4.5vw, 62px);
+    height: auto;
+    max-width: 100%;
+    object-fit: contain;
+    flex-shrink: 0;
 }
 
 .topnav {
@@ -157,6 +156,17 @@ h1 {
 
 .button-primary:hover {
     background: var(--coral-dark);
+}
+
+.button-secondary {
+    color: var(--ink);
+    border: 1px solid var(--line);
+    background: var(--surface);
+}
+
+.button-secondary:hover {
+    border-color: var(--coral);
+    color: var(--coral);
 }
 
 .form-card {
@@ -332,12 +342,89 @@ textarea:focus {
     object-fit: cover;
 }
 
+.pfp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
+    gap: 10px;
+}
+
+.pfp-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
+    gap: 10px;
+}
+
+.pfp-option {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    padding: 8px 6px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+    text-align: center;
+    transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+
+.pfp-option:hover {
+    border-color: #efb9ad;
+    transform: translateY(-1px);
+}
+
+.pfp-option.is-hidden {
+    display: none;
+}
+
+.pfp-option:has(input:checked) {
+    border-color: var(--coral);
+    color: var(--ink);
+    background: var(--coral-soft);
+}
+
+.pfp-option input {
+    position: absolute;
+    opacity: 0;
+}
+
+.pfp-preview {
+    display: block;
+    width: 58px;
+    height: 58px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--mint);
+}
+
+.pfp-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 .form-errors {
     margin-bottom: 18px;
     padding: 10px 12px;
     border-radius: 5px;
     color: #8d2d20;
     background: var(--coral-soft);
+}
+
+.profile-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.profile-actions > * {
+    width: 100%;
+}
+
+.profile-actions form {
+    display: block;
+    width: 100%;
 }
 
 .browse-heading {
@@ -499,6 +586,98 @@ textarea:focus {
     color: var(--muted);
 }
 
+.detail-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+    gap: clamp(28px, 5vw, 64px);
+    width: min(1080px, 100%);
+    margin: 0 auto;
+    padding: 52px clamp(20px, 5vw, 72px) 80px;
+}
+
+.detail-gallery {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-content: start;
+}
+
+.detail-image {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 6px;
+    background: var(--mint);
+}
+
+.detail-gallery .detail-image:first-child {
+    grid-column: 1 / -1;
+    aspect-ratio: 1.35;
+}
+
+.detail-gallery .placeholder-image {
+    width: 100%;
+    min-height: 320px;
+    border-radius: 6px;
+    background: var(--mint);
+}
+
+.detail-body {
+    align-self: start;
+    padding-top: 8px;
+}
+
+.price-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 24px 0;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+}
+
+.price-row strong {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 28px;
+}
+
+.price-row span {
+    color: var(--coral);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.detail-description {
+    color: var(--muted);
+}
+
+.detail-list {
+    display: grid;
+    gap: 14px;
+    margin: 28px 0;
+    padding: 20px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+.detail-list div {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.detail-list dt {
+    color: var(--muted);
+}
+
+.detail-list dd {
+    margin: 0;
+    font-weight: 600;
+    text-align: right;
+}
+
 [hidden] {
     display: none !important;
 }
@@ -551,7 +730,8 @@ textarea:focus {
 
     .form-grid,
     .listing-grid,
-    .choice-group {
+    .choice-group,
+    .detail-shell {
         grid-template-columns: 1fr;
     }
 
@@ -567,5 +747,13 @@ textarea:focus {
         align-items: start;
         flex-direction: column;
         gap: 4px;
+    }
+
+    .profile-actions {
+        gap: 10px;
+    }
+
+    .detail-shell {
+        padding-top: 36px;
     }
 }

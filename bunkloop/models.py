@@ -16,10 +16,18 @@ class University(models.Model):
 
 
 class ProfileImage(models.Model):
-    """Predefined profile pictures available for users to choose from."""
+    """Predefined profile pictures uploaded by an administrator."""
+
+    PFP_TYPE_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('non_binary', 'Non-binary'),
+    ]
 
     name = models.CharField(max_length=100, unique=True)
-    image_url = models.URLField(max_length=500)
+    pfp_type = models.CharField(max_length=20, choices=PFP_TYPE_CHOICES, default='non_binary')
+    image = models.ImageField(upload_to='profile_images/', blank=True, null=True)
+    image_url = models.URLField(max_length=500, blank=True, default='')
 
     class Meta:
         ordering = ['name']
@@ -54,6 +62,7 @@ class User(AbstractUser):
     GENDER_CHOICES = [
         ('male', 'Male'),
         ('female', 'Female'),
+        ('non_binary', 'Non-binary'),
         ('other', 'Other'),
         ('prefer_not_to_say', 'Prefer not to say'),
     ]
@@ -107,6 +116,8 @@ class Item(models.Model):
         ('renting', 'Renting'),
     ]
 
+    title = models.CharField(max_length=150)
+    description = models.TextField(blank=True, default='')
     registration_id = models.ForeignKey(User, to_field='registration_id', on_delete=models.CASCADE, related_name='items')
     category = models.ForeignKey(ItemCategory, on_delete=models.PROTECT, related_name='items')
     price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -118,7 +129,7 @@ class Item(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.registration_id} - {self.category} ({self.listing_type})'
+        return f'{self.title} - {self.registration_id}'
 
 
 class ItemImage(models.Model):

@@ -1,0 +1,30 @@
+{% extends 'bunkloop/base.html' %}
+
+{% block title %}{{ item.title }} | Bunkloop{% endblock %}
+
+{% block content %}
+<section class="container detail-shell">
+    <div class="detail-gallery">
+        {% for item_image in item.images.all %}
+            <img src="{{ item_image.image.url }}" alt="{{ item.title }} photo {{ forloop.counter }}" class="detail-image">
+        {% empty %}
+            <div class="placeholder-image large">No image</div>
+        {% endfor %}
+    </div>
+
+    <div class="detail-body">
+        <span class="eyebrow">{{ item.category.name }} · {{ item.listing_type|title }}</span>
+        <h1>{{ item.title }}</h1>
+        <div class="price-row"><strong>₹{{ item.price }}</strong><span>{{ item.condition|title }}</span></div>
+        <p class="detail-description">{{ item.description|default:"No description provided."|linebreaksbr }}</p>
+        <dl class="detail-list">
+            <div><dt>Condition</dt><dd>{{ item.condition|title }}</dd></div>
+            <div><dt>Listed</dt><dd>{{ item.created_at|date:"j M Y, g:i A" }}</dd></div>
+            <div><dt>Seller</dt><dd>{{ item.registration_id.full_name }}</dd></div>
+            <div><dt>University</dt><dd>{{ item.registration_id.university.name }}</dd></div>
+            <div><dt>Contact</dt><dd>{{ item.registration_id.contact_number|default:"Not provided" }}</dd></div>
+        </dl>
+        <a href="{% url 'bunkloop:home' %}" class="button button-primary">Back to marketplace</a>
+    </div>
+</section>
+{% endblock %}

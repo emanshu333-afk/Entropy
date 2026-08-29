@@ -1,0 +1,15 @@
+{% extends 'bunkloop/base.html' %}
+{% block title %}Page not found | Bunkloop{% endblock %}
+{% block content %}
+<section class="page narrow-page">
+    <div class="form-card error-card">
+        <div class="eyebrow">404</div>
+        <h1>Looks like this page wandered off campus.</h1>
+        <p class="intro">The page you were looking for does not exist or may have moved.</p>
+        <div class="profile-actions">
+            <a class="button button-primary" href="{% url 'bunkloop:home' %}">Back to marketplace</a>
+            <a class="button button-secondary" href="{% url 'bunkloop:signup' %}">Create account</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

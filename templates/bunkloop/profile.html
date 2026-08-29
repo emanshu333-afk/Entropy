@@ -1,0 +1,26 @@
+{% extends 'bunkloop/base.html' %}
+{% block title %}Profile | Bunkloop{% endblock %}
+{% block content %}
+<section class="page narrow-page">
+    <div class="eyebrow">Your student profile</div>
+    <h1>{{ user.full_name }}</h1>
+    <div class="form-card">
+        <dl class="detail-list">
+            <div><dt>Registration ID</dt><dd>{{ user.registration_id }}</dd></div>
+            <div><dt>Email</dt><dd>{{ user.email }}</dd></div>
+            <div><dt>University</dt><dd>{{ user.university.name|default:'Not set' }}</dd></div>
+            <div><dt>Student type</dt><dd>{{ user.student_type|title }}</dd></div>
+            <div><dt>Hostel</dt><dd>{{ user.hostel.name|default:'Not assigned' }}</dd></div>
+            <div><dt>Contact</dt><dd>{{ user.contact_number|default:'Not provided' }}</dd></div>
+        </dl>
+        <div class="profile-actions">
+            <a class="button button-primary" href="{% url 'bunkloop:home' %}">Back to marketplace</a>
+            <a class="button button-secondary" href="{% url 'bunkloop:my_items' %}">My items</a>
+            <form method="post" action="{% url 'bunkloop:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="button button-secondary">Log out</button>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -24,15 +24,29 @@
                 <label for="id_university">University</label>
                 <select id="id_university" name="university" required>
                     <option value="">Choose university</option>
-                    <option>Delhi University</option>
-                    <option>Amity University</option>
-                    <option>Other</option>
+                    {% for university in universities %}
+                        <option value="{{ university.pk }}">{{ university.name }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="field field-wide">
-                <label for="id_profile_image">Profile image</label>
-                <input id="id_profile_image" name="profile_image" type="file" accept="image/*">
-                <span class="field-help">Optional. A clear photo helps build trust.</span>
+                <label for="id_gender">Profile image</label>
+                <div class="pfp-grid" data-pfp-grid>
+                    {% for gender_key, images in profile_image_options.items %}
+                        <div class="pfp-group" data-pfp-group="{{ gender_key }}" hidden>
+                            {% for image in images %}
+                                <label class="pfp-option">
+                                    <input type="radio" name="profile_image" value="{{ image.id }}" data-pfp-gender="{{ gender_key }}">
+                                    <span class="pfp-preview"><img src="{% if image.image %}{{ image.image.url }}{% else %}{{ image.image_url }}{% endif %}" alt="{{ image.name }}"></span>
+                                    <span>{{ image.name }}</span>
+                                </label>
+                            {% empty %}
+                                <span class="field-help">No profile photos available for this gender yet.</span>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <span class="field-help">Choose a profile image after selecting your gender.</span>
             </div>
             <div class="field">
                 <label for="id_contact_number">Contact number</label>
@@ -50,9 +64,9 @@
                 <label for="id_hostel">Hostel</label>
                 <select id="id_hostel" name="hostel">
                     <option value="">Choose hostel</option>
-                    <option>Hostel A</option>
-                    <option>Hostel B</option>
-                    <option>Hostel C</option>
+                    {% for hostel in hostels %}
+                        <option value="{{ hostel.pk }}">{{ hostel.name }} ({{ hostel.university.name }})</option>
+                    {% endfor %}
                 </select>
                 <span class="field-help">Required for hostel residents.</span>
             </div>
@@ -61,13 +75,22 @@
                 <input id="id_email" name="email" type="email" autocomplete="email" required>
             </div>
             <div class="field">
+                <label for="id_password">Password</label>
+                <input id="id_password" name="password" type="password" autocomplete="new-password" required>
+            </div>
+            <div class="field">
+                <label for="id_confirm_password">Confirm password</label>
+                <input id="id_confirm_password" name="confirm_password" type="password" autocomplete="new-password" required>
+            </div>
+            <div class="field">
                 <label for="id_gender">Gender</label>
                 <select id="id_gender" name="gender" required>
                     <option value="">Choose gender</option>
-                    <option>Female</option>
-                    <option>Male</option>
-                    <option>Non-binary</option>
-                    <option>Prefer not to say</option>
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                    <option value="non_binary">Non-binary</option>
+                    <option value="other">Other</option>
+                    <option value="prefer_not_to_say">Prefer not to say</option>
                 </select>
             </div>
         </div>

@@ -1,31 +1,15 @@
-{% extends "bunkloop/base.html" %}
-{% block title %}Browse marketplace | Bunkloop{% endblock %}
+{% extends 'bunkloop/base.html' %}
+{% block title %}My items | Bunkloop{% endblock %}
 {% block content %}
 <section class="page browse-page">
     <div class="browse-heading">
         <div>
-            <div class="eyebrow">Your campus marketplace</div>
-            <h1>Useful things,<br>close to home.</h1>
-            <p class="intro">Buy, sell, or rent from students in your community.</p>
+            <div class="eyebrow">Your listings</div>
+            <h1>My items</h1>
         </div>
         <a class="button button-primary" href="{% url 'bunkloop:item_create' %}">+ Post an item</a>
     </div>
-    <div class="browse-toolbar">
-        <label class="search-field">
-            <span aria-hidden="true">⌕</span>
-            <input type="search" name="q" placeholder="Search items..." aria-label="Search items">
-        </label>
-        <div class="filter-chips" aria-label="Filter listings">
-            <button class="chip active" type="button">All items</button>
-            {% for category in categories %}
-                <button class="chip" type="button">{{ category.name }}</button>
-            {% endfor %}
-        </div>
-    </div>
-    <div class="results-heading">
-        <h2>Fresh on campus</h2>
-        <span>{{ listings|length }} available item{{ listings|length|pluralize }}</span>
-    </div>
+
     <div class="listing-grid">
         {% for item in listings %}
             <article class="listing-card">
@@ -43,7 +27,11 @@
                 </a>
             </article>
         {% empty %}
-            <div class="empty-state"><h2>No listings yet</h2><p>Be the first student to share something useful.</p><a class="button button-primary" href="{% url 'bunkloop:item_create' %}">Post an item</a></div>
+            <div class="empty-state">
+                <h2>No items yet</h2>
+                <p>Post the first item from your campus.</p>
+                <a class="button button-primary" href="{% url 'bunkloop:item_create' %}">Post an item</a>
+            </div>
         {% endfor %}
     </div>
 </section>
