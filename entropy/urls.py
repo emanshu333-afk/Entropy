@@ -19,7 +19,11 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from bunkloop.views import health_check
+
 urlpatterns = [
+    path('health/', health_check, name='health_check'),
+    path('api/', include('bunkloop.api_urls')),
     path('', include('bunkloop.urls')),
     path('admin/', admin.site.urls),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

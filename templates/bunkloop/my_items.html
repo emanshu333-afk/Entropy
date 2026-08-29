@@ -23,8 +23,19 @@
                         <div class="listing-line"><h3>{{ item.title }}</h3><strong>₹{{ item.price }}</strong></div>
                         <div class="listing-tags"><span>{{ item.category }}</span><span>{{ item.get_listing_type_display }}</span></div>
                         <div class="listing-meta"><span>{{ item.get_condition_display }}</span><span>{{ item.created_at|timesince }} ago</span></div>
+                        <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; font-size:11px;">
+                            <span style="padding:4px 8px; border-radius:999px; background:#f1f0eb; color:var(--muted);">{{ item.conv_count }} chat{{ item.conv_count|pluralize }}</span>
+                            <span style="padding:4px 8px; border-radius:999px; background:{% if item.pending_order %}var(--coral-soft); color:var(--coral-dark);{% else %}#f1f0eb; color:var(--muted);{% endif %}">{{ item.order_count }} order{{ item.order_count|pluralize }}{% if item.pending_order %} — {{ item.pending_order.status }}{% endif %}</span>
+                        </div>
                     </div>
                 </a>
+                <div style="padding:0 15px 15px; display:flex; gap:8px;">
+                    <a href="{% url 'bunkloop:item_detail' item.pk %}" class="button button-small button-secondary" style="flex:1;">View</a>
+                    <form method="post" action="{% url 'bunkloop:item_delete' item.pk %}" style="flex:1;" onsubmit="return confirm('Remove this listing?');">
+                        {% csrf_token %}
+                        <button type="submit" class="button button-small" style="width:100%; background:#8d2d20; color:#fff;">Remove</button>
+                    </form>
+                </div>
             </article>
         {% empty %}
             <div class="empty-state">

@@ -24,7 +24,43 @@
             <div><dt>University</dt><dd>{{ item.registration_id.university.name }}</dd></div>
             <div><dt>Contact</dt><dd>{{ item.registration_id.contact_number|default:"Not provided" }}</dd></div>
         </dl>
-        <a href="{% url 'bunkloop:home' %}" class="button button-primary">Back to marketplace</a>
+        <div class="detail-actions" style="display:grid; gap:12px; margin-top:24px;">
+            {% if current_user and current_user.pk != item.registration_id.pk %}
+                <!-- Contact Seller — only visible to non-owners (buyer) -->
+                <div style="padding:14px; border:1px solid var(--line); border-radius:8px; background:#fcfbf8;">
+                    <div style="font-weight:700; font-size:14px;">Contact Seller</div>
+                    <div style="color:var(--muted); font-size:13px; margin-top:4px;">{{ item.registration_id.full_name }} · {{ item.registration_id.university.name }}</div>
+                    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                        {% if item.registration_id.contact_number %}
+                            <a href="tel:{{ item.registration_id.contact_number }}" class="button button-small button-secondary">Call {{ item.registration_id.contact_number }}</a>
+                        {% endif %}
+                        <a href="mailto:{{ item.registration_id.email }}" class="button button-small button-secondary">Email Seller</a>
+                    </div>
+                </div>
+                <form method="post" action="{% url 'bunkloop:start_conversation' item.pk %}" style="display:grid; gap:8px;">
+                    {% csrf_token %}
+                    <input type="hidden" name="body" value="Hi, is this still available?">
+                    <button type="submit" class="button button-primary">Message Seller</button>
+                </form>
+                {% if existing_conversation %}
+                    <a href="{% url 'bunkloop:conversation_detail' existing_conversation.pk %}" class="button button-secondary">View Conversation</a>
+                {% endif %}
+                <form method="post" action="{% url 'bunkloop:order_create' item.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="button button-primary" style="background: var(--ink);">Buy / Rent Now — ₹{{ item.price }}</button>
+                </form>
+                {% if existing_order %}
+                    <a href="{% url 'bunkloop:order_detail' existing_order.pk %}" class="button button-secondary">View Order #{{ existing_order.pk }} ({{ existing_order.status }})</a>
+                {% endif %}
+            {% else %}
+                <p class="field-help">You are the seller of this item.</p>
+                <form method="post" action="{% url 'bunkloop:item_delete' item.pk %}" onsubmit="return confirm('Remove this listing? This cannot be undone.');">
+                    {% csrf_token %}
+                    <button type="submit" class="button button-primary" style="background:#8d2d20;">Remove Listing</button>
+                </form>
+            {% endif %}
+            <a href="{% url 'bunkloop:home' %}" class="button button-secondary">Back to marketplace</a>
+        </div>
     </div>
 </section>
 {% endblock %}

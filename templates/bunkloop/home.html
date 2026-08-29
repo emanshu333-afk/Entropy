@@ -10,18 +10,24 @@
         </div>
         <a class="button button-primary" href="{% url 'bunkloop:item_create' %}">+ Post an item</a>
     </div>
-    <div class="browse-toolbar">
+    <form class="browse-toolbar" method="get" action="{% url 'bunkloop:home' %}">
         <label class="search-field">
             <span aria-hidden="true">⌕</span>
-            <input type="search" name="q" placeholder="Search items..." aria-label="Search items">
+            <input type="search" name="q" value="{{ q }}" placeholder="Search items..." aria-label="Search items">
         </label>
         <div class="filter-chips" aria-label="Filter listings">
-            <button class="chip active" type="button">All items</button>
+            <a href="{% url 'bunkloop:home' %}{% if q %}?q={{ q }}{% endif %}" class="chip {% if not active_category %}active{% endif %}">All items</a>
             {% for category in categories %}
-                <button class="chip" type="button">{{ category.name }}</button>
+                <a href="{% url 'bunkloop:home' %}?{% if q %}q={{ q }}&{% endif %}category={{ category.pk }}" class="chip {% if active_category and active_category.pk == category.pk %}active{% endif %}">{{ category.name }}</a>
             {% endfor %}
         </div>
-    </div>
+        <button type="submit" class="button button-small button-secondary" style="max-width:120px;">Search</button>
+    </form>
+    {% if q or active_category %}
+        <div style="margin-top:12px; color:var(--muted); font-size:13px;">
+            Showing {% if q %}results for "<strong>{{ q }}</strong>"{% endif %} {% if active_category %}in <strong>{{ active_category.name }}</strong>{% endif %} — <a href="{% url 'bunkloop:home' %}" style="color:var(--coral);">Clear filters</a>
+        </div>
+    {% endif %}
     <div class="results-heading">
         <h2>Fresh on campus</h2>
         <span>{{ listings|length }} available item{{ listings|length|pluralize }}</span>

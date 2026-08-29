@@ -1,0 +1,58 @@
+{% extends "bunkloop/base.html" %}
+{% block title %}Orders | Bunkloop{% endblock %}
+{% block content %}
+<section class="page">
+    <div class="browse-heading">
+        <div>
+            <div class="eyebrow">Order lifecycle</div>
+            <h1>Your orders</h1>
+            <p class="intro">Track purchases, sales, and delivery status. Seller confirmation required after payment.</p>
+        </div>
+    </div>
+    {% if messages %}
+        {% for message in messages %}
+            <div class="form-errors">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    <div style="margin-top:32px; display:grid; gap:32px;">
+        <div>
+            <h2 style="font-size:18px; margin-bottom:12px;">As buyer ({{ buyer_orders|length }})</h2>
+            {% for order in buyer_orders %}
+                <a href="{% url 'bunkloop:order_detail' order.pk %}" style="display:block; border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:16px; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; gap:12px;">
+                        <div>
+                            <strong>Order #{{ order.pk }} — {{ order.item.title }}</strong>
+                            <div style="color:var(--muted); font-size:13px; margin-top:2px;">Seller: {{ order.seller.full_name }} · ₹{{ order.amount }} · {{ order.listing_type }}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="padding:4px 8px; border-radius:999px; font-size:12px; font-weight:700; background:{% if order.status == 'paid' %}var(--coral-soft); color:var(--coral-dark);{% elif order.status == 'completed' %}var(--mint); color:#1a6b46;{% elif order.status == 'cancelled' %}#fde8e8; color:#8d2d20;{% else %}#f1f0eb; color:var(--muted);{% endif %}">{{ order.status }} / {{ order.payment_status }}</span>
+                            <div style="color:var(--muted); font-size:11px; margin-top:4px;">{{ order.created_at|timesince }} ago</div>
+                        </div>
+                    </div>
+                </a>
+            {% empty %}
+                <div class="empty-state"><p>No purchases yet.</p><a href="{% url 'bunkloop:home' %}" class="button button-primary">Browse</a></div>
+            {% endfor %}
+        </div>
+        <div>
+            <h2 style="font-size:18px; margin-bottom:12px;">As seller ({{ seller_orders|length }})</h2>
+            {% for order in seller_orders %}
+                <a href="{% url 'bunkloop:order_detail' order.pk %}" style="display:block; border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:16px; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; gap:12px;">
+                        <div>
+                            <strong>Order #{{ order.pk }} — {{ order.item.title }}</strong>
+                            <div style="color:var(--muted); font-size:13px; margin-top:2px;">Buyer: {{ order.buyer.full_name }} · ₹{{ order.amount }}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="padding:4px 8px; border-radius:999px; font-size:12px; font-weight:700; background:{% if order.status == 'paid' %}var(--coral-soft); color:var(--coral-dark);{% elif order.status == 'completed' %}var(--mint); color:#1a6b46;{% else %}#f1f0eb; color:var(--muted);{% endif %}">{{ order.status }}</span>
+                            <div style="color:var(--muted); font-size:11px; margin-top:4px;">{{ order.created_at|timesince }} ago</div>
+                        </div>
+                    </div>
+                </a>
+            {% empty %}
+                <div class="empty-state"><p>No sales yet.</p><a href="{% url 'bunkloop:item_create' %}" class="button button-secondary">Post an item</a></div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,13 +1,13 @@
 # Bunkloop Student Onboarding Implementation - Progress Log
 
 **Last Updated:** 2026-08-29  
-**Project Status:** ✅ Core Features Implemented & Tested  
+**Project Status:** ✅ Core + Messaging + Orders + Deployment Ready (9/9 tests passing)  
 
 ---
 
 ## 📋 Executive Summary
 
-The Bunkloop application has successfully implemented a secure student onboarding workflow with email verification, OTP-based authentication, and identity photo capture. All core features are implemented and tested (5/5 tests passing).
+The Bunkloop application has successfully implemented a secure student onboarding workflow with email verification, OTP-based authentication, and identity photo capture. **Critical ProgrammingError on login/signup fixed**, plus Phase 3 Messaging, Phase 4/5 Order lifecycle, and Phase 6 Docker deployment are now complete and tested (9/9 tests passing).
 
 ---
 
@@ -104,15 +104,15 @@ The Bunkloop application has successfully implemented a secure student onboardin
   - `email-validator==2.2.0` - Email validation library
 
 ### 7. **Test Suite - All Passing** ✅
-- **Status:** ✅ Complete - 5/5 Tests Passing
+- **Status:** ✅ Complete - 9/9 Tests Passing (2026-08-29)
 - **Files:** `bunkloop/tests.py`
-- **Test Results:**
+- **Test Results (postgres):**
   ```
-  Found 5 test(s).
+  Found 9 test(s).
   Creating test database for alias 'default'...
   System check identified no issues (0 silenced).
-  .....
-  Ran 5 tests in 2.292s
+  .........
+  Ran 9 tests in 9.834s
   OK
   ```
 
@@ -122,6 +122,10 @@ The Bunkloop application has successfully implemented a secure student onboardin
 3. ✅ `test_required_routes_exist` - Validates all required URL routes are configured
 4. ✅ `test_signup_rejects_non_student_email_domain` - Validates gmail.com emails are rejected
 5. ✅ `test_signup_redirects_to_otp_verification_for_valid_student_email` - Validates OTP flow with valid .edu email
+6. ✅ `test_buyer_can_start_conversation_and_send_message` - Messaging happy path
+7. ✅ `test_conversation_is_isolated_to_participants` - Only participants can access
+8. ✅ `test_checkout_creates_order_and_seller_can_confirm` - Full order lifecycle pending→completed
+9. ✅ `test_health_endpoint` - `/health/` returns ok
 
 **Code Location:** [bunkloop/tests.py](bunkloop/tests.py)
 
@@ -135,18 +139,55 @@ The Bunkloop application has successfully implemented a secure student onboardin
   - Set email backend to console backend for development
   - Added test database configuration to handle both SQLite and PostgreSQL
 
+### 9. **Critical Bugfix — ProgrammingError on Login/Signup (2026-08-29)**
+- **Status:** ✅ Complete & Verified (9/9 tests)
+- **Root Causes:**
+  - `bunkloop_user` missing `identity_photo` / `email_verified` columns — `migrations/0001_initial.py` regenerated with those fields but DB still on old schema with orphan migrations 0002-0006. Any `User.objects.filter()` in `bunkloop/views.py:28-30` raised `UndefinedColumn: bunkloop_user.identity_photo does not exist`.
+  - `OTP_STORE` stored closed `UploadedFile` in `bunkloop/views.py:92`; `verify_email` `user.save()` raised `ValueError: I/O operation on closed file`.
+- **Fixes:**
+  - SQL `ALTER TABLE bunkloop_user ADD COLUMN identity_photo varchar(100) / email_verified boolean` + idempotent migration `bunkloop/migrations/0007_ensure_identity_fields.py` (postgres/sqlite `IF NOT EXISTS`).
+  - `bunkloop/views.py:92-114` now persists `identity_photo` bytes (+name/content_type) and reconstructs `SimpleUploadedFile` in `verify_email` `bunkloop/views.py:160-165`.
+  - Installed `whitenoise` fix for `Middleware` import, ensured `staticfiles` dir, granted `CREATEDB` to `bunkloop` for postgres test DB.
+- **Verification:** `POST /signup` → `POST /verify-email` → `POST /login` → `GET /` end-to-end (thapar.edu), `python manage.py test bunkloop.tests` 9/9 OK on postgres & sqlite, `/health/` returns `{"status":"ok"}`.
+
+### 10. **Buyer-Seller Messaging System (Phase 3)**
+- **Status:** ✅ Complete & Tested
+- **Models:** `bunkloop/models.py:159-192` — `Conversation(item, buyer, seller, unique_together=item+buyer)` + `Message(conversation, sender, body, is_read)`.
+- **Migration:** `bunkloop/migrations/0008_conversation_message_order.py`
+- **Views:** `bunkloop/views.py:269-384` — `conversation_list`, `conversation_detail`, `start_conversation`, `health_check`; `Q(buyer|seller)` filter + participant guard + unread counts + `updated_at` touch.
+- **Urls:** `bunkloop/urls.py:12-16` — `/messages/`, `/messages/<pk>/`, `/items/<pk>/contact/`
+- **Templates:** `templates/bunkloop/conversations.html`, `conversation_detail.html`; integrated into `item_detail.html` (Message Seller / View Conversation) and `base.html` (Messages nav).
+- **Admin:** `bunkloop/admin.py:70-84`
+- **Tests:** `bunkloop/tests.py:166-209` — `MessagingFlowTest` (start, send, isolation).
+
+### 11. **Order & Checkout Flow with Seller Confirmation (Phase 4/5)**
+- **Status:** ✅ Complete & Tested (mock gateway, Razorpay/Stripe-ready via env)
+- **Model:** `bunkloop/models.py:195-231` — `Order(item, buyer, seller, amount, listing_type, status, payment_status, payment_reference, provider)` with choices `pending→paid→confirmed→shipped→delivered→completed` + `cancelled`.
+- **Views:** `bunkloop/views.py:386-442` — `order_create` (mock `succeeded` + `MOCK-{pk}` ref), `order_list`, `order_detail`, `order_update_status` (role-restricted transitions, auditable `updated_at`).
+- **Urls:** `/items/<pk>/checkout/`, `/orders/`, `/orders/<pk>/`, `/orders/<pk>/update/`
+- **Templates:** `order_confirm.html`, `orders.html`, `order_detail.html`; integrated into `item_detail.html` (Buy/Rent Now) and `base.html` (Orders nav).
+- **Tests:** `bunkloop/tests.py:211-252` — `OrderFlowTest` full lifecycle + health endpoint.
+
+### 12. **Docker & Production Deployment (Phase 6)**
+- **Status:** ✅ Complete
+- **Files Added:** `Dockerfile` (python:3.12-slim, gunicorn, whitenoise, healthcheck), `docker-compose.yml` (postgres:16-alpine + web, migrates & collectstatic on boot), `.dockerignore`
+- **Settings:** `entropy/settings.py:29-33,42-48,95-130` — `DJANGO_DEBUG` env, `ALLOWED_HOSTS` parsing, `WhiteNoiseMiddleware` + `CompressedManifestStaticFilesStorage`, `SECURE_*` when `DEBUG=False`, `EMAIL_*` env, `RAZORPAY_*`/`STRIPE_*`, `LOGGING` console, `health_check` at `entropy/urls.py:5-6` + `bunkloop/views.py:58-72` (`/health/` DB probe).
+- **Deps:** `requirements.txt` + `gunicorn==22.0.0`, `whitenoise==6.6.0`
+- **Env Template:** `.env.example` expanded with `DJANGO_DEBUG`, email SMTP, payment keys, S3 placeholders.
+- **Verification:** `python manage.py check` OK, `docker compose config` valid, `/health/` probe used by both Dockerfile `HEALTHCHECK` and compose.
+
 ---
 
 ## 🔄 IN PROGRESS
 
-None - All core features are complete and tested.
+None - Auth fix + Messaging + Orders + Docker complete. Next focus: frontend polish, email SMTP prod, security hardening (see Pending).
 
 ---
 
 ## ⏳ PENDING TASKS
 
-### 1. **Frontend Polish & UX Refinement**
-- **Status:** Pending
+### 1. **Frontend Polish & UX Refinement** (partially done via Messaging/Orders UI)
+- **Status:** Partial — base nav + item_detail + conversations/orders templates added; needs animations/spinners/toasts
 - **Tasks:**
   - Add CSS animations for form transitions
   - Implement better error message styling
@@ -165,16 +206,17 @@ None - All core features are complete and tested.
   - Add email retry logic for failed deliveries
   - Implement email logging
 
-### 3. **Production Deployment**
-- **Status:** Pending
-- **Tasks:**
-  - Configure environment variables for production
-  - Set up PostgreSQL database connection
-  - Configure static/media file storage (AWS S3 or similar)
+### 3. **Production Deployment** (Docker done, deploy pending)
+- **Status:** Docker ✅, Cloud deploy ⏳
+- **Tasks Done:**
+  - ✅ Dockerized (`Dockerfile` + `docker-compose.yml` + `.dockerignore`)
+  - ✅ Environment variables externalized (`entropy/settings.py` + `.env.example`)
+  - ✅ WhiteNoise + collectstatic + `/health/` probe
+  - ✅ `gunicorn` workers
+- **Remaining:**
+  - Configure static/media file storage (AWS S3 or similar) for prod
   - Set up SSL/TLS certificates
-  - Configure CORS and security headers
-  - Set up logging and monitoring
-  - Deploy to production server (AWS, Heroku, DigitalOcean, etc.)
+  - Deploy to cloud (AWS/Heroku/DigitalOcean)
 
 ### 4. **Advanced Features**
 - **Status:** Pending - Future Enhancements
@@ -233,14 +275,16 @@ None - All core features are complete and tested.
 
 | Component | Status | Files | Tests |
 |-----------|--------|-------|-------|
-| Models | ✅ Complete | bunkloop/models.py | ✅ Pass |
+| Models | ✅ Complete | bunkloop/models.py (User+Item+Conversation/Message/Order) | ✅ Pass |
 | Forms | ✅ Complete | bunkloop/forms.py | ✅ Pass |
-| Views | ✅ Complete | bunkloop/views.py | ✅ Pass |
-| URLs | ✅ Complete | bunkloop/urls.py | ✅ Pass |
-| Templates | ✅ Complete | templates/bunkloop/* | ✅ Pass |
-| Styles | ✅ Complete | static/css/app.css | ✅ Visual |
-| Migrations | ✅ Complete | bunkloop/migrations/* | ✅ Pass |
-| Tests | ✅ Complete | bunkloop/tests.py | ✅ 5/5 Pass |
+| Views | ✅ Complete | bunkloop/views.py (auth+messaging+orders+health) | ✅ Pass |
+| URLs | ✅ Complete | bunkloop/urls.py + entropy/urls.py (/health/) | ✅ Pass |
+| Templates | ✅ Complete | templates/bunkloop/* (+5 new) | ✅ Pass |
+| Styles | ✅ Complete | static/css/app.css + inline chat/order | ✅ Visual |
+| Migrations | ✅ Complete | bunkloop/migrations/* (0007+0008) | ✅ Pass |
+| Tests | ✅ Complete | bunkloop/tests.py | ✅ 9/9 Pass |
+| Docker | ✅ Complete | Dockerfile, docker-compose.yml, .dockerignore | ✅ Config valid |
+| Settings | ✅ Complete | entropy/settings.py (prod-ready) | ✅ check OK |
 
 ---
 
@@ -394,22 +438,20 @@ Entropy_temp/
 
 ## 🎯 Next Steps (Priority Order)
 
-1. **High Priority:**
-   - Test the complete signup flow with real university emails
-   - Configure email backend for production
-   - Deploy to staging environment
-   - Security audit and penetration testing
+1. **High Priority (remaining):**
+   - Configure email SMTP for production (currently console backend)
+   - Deploy Docker stack to staging (AWS/Heroku) and smoke-test `/health/`, auth, messaging, orders
+   - Security hardening: rate limiting, CAPTCHA, session timeout, CSP
 
 2. **Medium Priority:**
-   - Add frontend validation and error messages
-   - Implement rate limiting
-   - Add logging and monitoring
+   - Frontend polish: animations, toasts, spinners
+   - Add logging/monitoring for orders/payments
    - Performance testing
 
 3. **Low Priority:**
-   - Additional features (2FA, social login)
+   - Real Razorpay/Stripe webhook verification (currently mock `succeeded`)
+   - 2FA, social login, password reset
    - Admin dashboard enhancements
-   - Advanced reporting
 
 ---
 

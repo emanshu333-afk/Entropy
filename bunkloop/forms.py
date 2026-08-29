@@ -9,6 +9,20 @@ from email_validator import EmailNotValidError, validate_email
 from .models import Hostel, Item, ItemCategory, ProfileImage, University, User
 
 
+def _is_domain_in_university_allowlist(domain: str) -> bool:
+    """Check if domain matches any University's configured domains list.
+    Empty domains list means no explicit allowlist — fallback to generic check.
+    Supports subdomain matching (e.g., mail.thapar.edu matches thapar.edu).
+    """
+    domain = domain.strip().lower()
+    # University table is small, loop in Python for SQLite/Postgres portability
+    # (JSON containment queries differ across backends)
+    for uni in University.objects.all():
+        if uni.domains and uni.is_domain_allowed(domain):
+            return True
+    return False
+
+
 def validate_student_email(email):
     try:
         validated = validate_email(email, check_deliverability=True)
@@ -24,8 +38,12 @@ def validate_student_email(email):
     if domain in denied_domains:
         raise ValidationError('Please use a valid university or student email address.')
 
-    if not (domain.endswith('.edu') or '.ac.' in domain or 'university' in domain or 'edu.' in domain):
-        raise ValidationError('Only university or academic student email domains are allowed.')
+    # If domain is explicitly allowed by any University's domains list, accept immediately (after MX check)
+    in_allowlist = _is_domain_in_university_allowlist(domain)
+
+    if not in_allowlist:
+        if not (domain.endswith('.edu') or '.ac.' in domain or 'university' in domain or 'edu.' in domain):
+            raise ValidationError('Only university or academic student email domains are allowed. If your university uses a custom domain, ask admin to add it to the University domains list.')
 
     try:
         answers = dns.resolver.resolve(domain, 'MX')
@@ -122,6 +140,16 @@ class UserProfileForm(forms.ModelForm):
 
         if cleaned_data.get('identity_photo') is None:
             self.add_error('identity_photo', 'A live camera photo is required for registration.')
+
+        # Enforce university domain allowlist if configured
+        university = cleaned_data.get('university')
+        email = cleaned_data.get('email')
+        if university and email:
+            domain = email.split('@')[-1].lower()
+            # If this university has explicit domains, email must match one of them
+            if university.domains and not university.is_domain_allowed(domain):
+                self.add_error('email', f'This email domain is not allowed for {university.name}. Allowed domains: {", ".join(university.domains)}')
+            # Also check general allowlist vs denied (already in validate_student_email) — no extra action here
 
         return cleaned_data
 

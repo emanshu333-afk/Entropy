@@ -20,26 +20,43 @@
             <p class="intro">A few details help people know they are buying from someone nearby.</p>
             <form class="form-card auth-form" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                {% if form.non_field_errors %}
+                {% if form.errors %}
+                    <div class="form-errors">
+                        <ul style="margin:0; padding-left:18px;">
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                            {% for error in form.non_field_errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% elif form.non_field_errors %}
                     <div class="form-errors">{{ form.non_field_errors }}</div>
                 {% endif %}
                 <div class="form-grid">
                     <div class="field field-wide">
                         <label for="id_full_name">Full name</label>
-                        <input id="id_full_name" name="full_name" type="text" autocomplete="name" required>
+                        <input id="id_full_name" name="full_name" type="text" autocomplete="name" required value="{{ form.full_name.value|default:'' }}">
+                        {% if form.full_name.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.full_name.errors }}</div>{% endif %}
                     </div>
                     <div class="field">
                         <label for="id_registration_id">Registration ID</label>
-                        <input id="id_registration_id" name="registration_id" type="text" required>
+                        <input id="id_registration_id" name="registration_id" type="text" required value="{{ form.registration_id.value|default:'' }}">
+                        {% if form.registration_id.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.registration_id.errors }}</div>{% endif %}
                     </div>
                     <div class="field">
                         <label for="id_university">University</label>
                         <select id="id_university" name="university" required>
                             <option value="">Choose university</option>
                             {% for university in universities %}
-                                <option value="{{ university.pk }}">{{ university.name }}</option>
+                                <option value="{{ university.pk }}" data-domains="{{ university.domains|join:', ' }}" {% if form.university.value == university.pk|stringformat:"s" %}selected{% endif %}>{% if university.domains %}{{ university.name }} — {{ university.domains|join:', ' }}{% else %}{{ university.name }}{% endif %}</option>
                             {% endfor %}
                         </select>
+                        <span class="field-help" data-university-domains-help>Select your university to see allowed email domains.</span>
+                        {% if form.university.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.university.errors }}</div>{% endif %}
                     </div>
                     <div class="field field-wide">
                         <label for="id_gender">Profile image</label>
@@ -62,7 +79,8 @@
                     </div>
                     <div class="field">
                         <label for="id_contact_number">Contact number</label>
-                        <input id="id_contact_number" name="contact_number" type="tel" autocomplete="tel" required>
+                        <input id="id_contact_number" name="contact_number" type="tel" autocomplete="tel" required value="{{ form.contact_number.value|default:'' }}">
+                        {% if form.contact_number.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.contact_number.errors }}</div>{% endif %}
                     </div>
                     <div class="field">
                         <label for="id_student_type">Student type</label>
@@ -70,6 +88,7 @@
                             <option value="">Choose student type</option>
                             <option value="hosteler">Hosteler</option>
                             <option value="day_scholar">Day scholar</option>
+                            <option value="pg">PG</option>
                         </select>
                     </div>
                     <div class="field field-wide hostel-field" data-hostel-field hidden>
@@ -77,15 +96,17 @@
                         <select id="id_hostel" name="hostel">
                             <option value="">Choose hostel</option>
                             {% for hostel in hostels %}
-                                <option value="{{ hostel.pk }}">{{ hostel.name }} ({{ hostel.university.name }})</option>
+                                <option value="{{ hostel.pk }}" {% if form.hostel.value == hostel.pk|stringformat:"s" %}selected{% endif %}>{{ hostel.name }} ({{ hostel.university.name }})</option>
                             {% endfor %}
                         </select>
                         <span class="field-help">Required for hostel residents.</span>
+                        {% if form.hostel.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.hostel.errors }}</div>{% endif %}
                     </div>
                     <div class="field field-wide">
                         <label for="id_email">Student email</label>
-                        <input id="id_email" name="email" type="email" autocomplete="email" required>
-                        <span class="field-help">Use your university email domain for verification.</span>
+                        <input id="id_email" name="email" type="email" autocomplete="email" required value="{{ form.email.value|default:'' }}">
+                        <span class="field-help" data-email-domains-help>Use your university email domain for verification.</span>
+                        {% if form.email.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.email.errors }}</div>{% endif %}
                     </div>
                     <div class="field">
                         <label for="id_password">Password</label>
@@ -99,6 +120,7 @@
                         <label for="id_identity_photo">Identity photo</label>
                         <input id="id_identity_photo" name="identity_photo" type="file" accept="image/*" capture="environment" required>
                         <span class="field-help">Capture a live photo from your camera device for verification.</span>
+                        {% if form.identity_photo.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.identity_photo.errors }}</div>{% endif %}
                     </div>
                     <div class="field">
                         <label for="id_gender">Gender</label>
@@ -113,6 +135,7 @@
                     </div>
                 </div>
                 <button class="button button-primary button-wide" type="submit">Continue to email verification</button>
+                <p class="helper-text">Already have an account? <a href="{% url 'bunkloop:login' %}">Log in</a></p>
             </form>
         </div>
     </div>

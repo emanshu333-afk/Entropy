@@ -1,0 +1,43 @@
+{% extends "bunkloop/base.html" %}
+{% load static %}
+{% block title %}Chat — {{ conversation.item.title }} | Bunkloop{% endblock %}
+{% block content %}
+<section class="page narrow-page">
+    <a href="{% url 'bunkloop:conversation_list' %}" style="color:var(--muted); font-size:13px;">← Back to messages</a>
+    <div style="margin-top:16px; border:1px solid var(--line); border-radius:8px; background:var(--surface); overflow:hidden; box-shadow:var(--shadow);" data-chat-container data-conversation-id="{{ conversation.pk }}" data-conversation-uuid="{{ conversation.uuid }}" data-current-user-id="{{ current_user.id }}" data-current-registration-id="{{ current_user.registration_id }}">
+        <div style="padding:16px 20px; border-bottom:1px solid var(--line); background: linear-gradient(180deg, #fff2ed 0%, #fffaf7 100%);">
+            <div class="eyebrow">Chat about listing</div>
+            <h2 style="margin:4px 0;">{{ conversation.item.title }} — ₹{{ conversation.item.price }}</h2>
+            <div style="color:var(--muted); font-size:13px;">
+                Buyer: {{ conversation.buyer.full_name }} · Seller: {{ conversation.seller.full_name }}
+                {% if conversation.university %}<br>University: {{ conversation.university.name }}{% endif %}
+            </div>
+            <a href="{% url 'bunkloop:item_detail' conversation.item.pk %}" class="button button-small button-secondary" style="margin-top:10px;">View listing</a>
+            <div style="margin-top:8px; font-size:11px; color:var(--muted);" data-chat-status>Connecting…</div>
+        </div>
+        <div style="padding:20px; display:grid; gap:14px; min-height:260px; max-height:420px; overflow-y:auto; background:var(--paper);" data-messages>
+            {% for msg in chat_messages %}
+                <div data-message-id="{{ msg.pk }}" style="display:flex; {% if msg.sender_id == current_user.id %}justify-content:flex-end;{% else %}justify-content:flex-start;{% endif %}">
+                    <div style="max-width:72%; padding:10px 14px; border-radius:14px; {% if msg.sender_id == current_user.id %}background:var(--coral); color:#fff; border-bottom-right-radius:4px;{% else %}background:#fff; border:1px solid var(--line); border-bottom-left-radius:4px;{% endif %}">
+                        <div style="font-size:14px; line-height:1.4;">{{ msg.content|default:msg.body|linebreaksbr }}</div>
+                        <div style="font-size:10px; margin-top:6px; opacity:0.75;">{{ msg.sender.full_name }} · {{ msg.created_at|date:"j M, g:i a" }} {% if msg.is_read and msg.sender_id == current_user.id %}✓ read{% endif %}</div>
+                    </div>
+                </div>
+            {% empty %}
+                <div data-empty style="text-align:center; color:var(--muted); font-size:13px; padding:30px 0;">No messages yet. Start the conversation below — real-time via WebSocket.</div>
+            {% endfor %}
+        </div>
+        <div style="padding:16px 20px; border-top:1px solid var(--line); background:var(--surface);">
+            <form method="post" data-chat-form style="display:flex; gap:8px; align-items:end;">
+                {% csrf_token %}
+                <textarea name="body" data-chat-input rows="2" placeholder="Type a message..." required style="flex:1; min-height:46px; resize:vertical;"></textarea>
+                <button type="submit" class="button button-primary" style="min-width:92px;">Send</button>
+            </form>
+            <p class="field-help" style="margin-top:8px;">Only participants can see this thread. Linked to listing #{{ conversation.item.pk }}. Messages persisted to PostgreSQL, real-time via Redis.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/chat.js' %}"></script>
+{% endblock %}
