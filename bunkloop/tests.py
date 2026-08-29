@@ -120,6 +120,7 @@ class SignupFlowTest(TestCase):
                 'gender': 'male',
                 'password': 'StrongPass123',
                 'confirm_password': 'StrongPass123',
+                'agree_tnd': 'on',
             },
         )
 
@@ -149,6 +150,7 @@ class SignupFlowTest(TestCase):
                 'gender': 'male',
                 'password': 'StrongPass123',
                 'confirm_password': 'StrongPass123',
+                'agree_tnd': 'on',
                 'identity_photo': SimpleUploadedFile(
                     'selfie.jpg',
                     create_test_image().getvalue(),

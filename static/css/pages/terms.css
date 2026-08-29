@@ -1,0 +1,125 @@
+/* UTF-8 — terms.css — per-page styles for terms.html */
+@charset "UTF-8";
+
+.browse-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+
+.browse-toolbar {
+    display: grid;
+    gap: 14px;
+    margin-top: 36px;
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+
+.search-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 420px;
+    color: var(--muted);
+}
+
+
+.filter-chips {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 2px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+
+.chip {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    color: var(--muted);
+    background: var(--surface);
+    cursor: pointer;
+}
+
+
+.results-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 32px 0 16px;
+}
+
+
+.listing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+
+.listing-card {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    transition: transform .18s, box-shadow .18s;
+}
+
+
+.listing-image {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1.25;
+    object-fit: cover;
+    background: var(--mint);
+}
+
+
+.listing-body {
+    padding: 15px;
+}
+
+
+.listing-line,
+.listing-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+
+.listing-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+
+.listing-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+
+.empty-state {
+    grid-column: 1 / -1;
+    padding: 40px 20px;
+    border: 1px dashed #c9c5ba;
+    border-radius: 8px;
+    text-align: center;
+}
+

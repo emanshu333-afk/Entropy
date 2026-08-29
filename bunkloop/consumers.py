@@ -90,13 +90,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def handle_message_send(self, content, message_type="text"):
         user = self.scope["user"]
-        # Validation (§23)
+        # Validation (§23) — env-driven
+        from django.conf import settings as _s
+        max_len = getattr(_s, 'CHAT_MAX_MESSAGE_LENGTH', 5000)
         content = (content or "").strip()
         if not content and message_type == "text":
             await self.send(text_data=json.dumps({"error": "Message cannot be empty", "type": "error"}))
             return
-        if len(content) > 5000:
-            await self.send(text_data=json.dumps({"error": "Message too long (max 5000)", "type": "error"}))
+        if len(content) > max_len:
+            await self.send(text_data=json.dumps({"error": f"Message too long (max {max_len})", "type": "error"}))
             return
         # Rate limiting (§22) — simple in-memory via cache; for MVP use cache
         allowed = await self.check_rate_limit(user)
@@ -238,13 +240,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def check_rate_limit(self, user):
-        # MVP: 30/min for normal, 10/min for new? Use simple cache with Redis if available, else allow
+        # MVP: env-driven (was hard-coded 30/min)
+        from django.conf import settings as _s
+        limit = getattr(_s, 'CHAT_RATE_LIMIT_PER_MINUTE', 30)
         try:
             from django.core.cache import cache
             key = f"chat_rate:user:{user.id}"
             # Use fixed window: increment and expire 60s
             count = cache.get(key, 0)
-            if count >= 30:
+            if count >= limit:
                 return False
             # Use add to handle race
             if count == 0:

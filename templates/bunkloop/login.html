@@ -1,5 +1,7 @@
 {% extends 'bunkloop/base.html' %}
+{% load static %}
 {% block title %}Login | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/login.css' %}">{% endblock %}
 {% block content %}
 <section class="page narrow-page auth-shell">
     <div class="auth-card auth-card--split">
@@ -39,4 +41,6 @@
         </div>
     </div>
 </section>
+{% block extra_js %}<script src="{% static 'js/pages/login.js' %}"></script>{% endblock %}
+
 {% endblock %}

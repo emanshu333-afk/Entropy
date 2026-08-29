@@ -1,6 +1,7 @@
 {% extends "bunkloop/base.html" %}
 {% load static %}
 {% block title %}Post an item | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/item_form.css' %}">{% endblock %}
 {% block content %}
 <section class="page narrow-page">
     <div class="eyebrow">Give it another life</div>
@@ -71,6 +72,6 @@
     </form>
 </section>
 {% endblock %}
-{% block extra_js %}
+{% block extra_js %}<script src="{% static 'js/pages/item_form.js' %}"></script>
     <script src="{% static 'js/item_form.js' %}"></script>
 {% endblock %}

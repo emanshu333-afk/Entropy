@@ -9,6 +9,8 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from django.conf import settings
+
 from .forms import ItemForm, UserProfileForm
 from .models import Conversation, Hostel, Item, ItemCategory, ItemImage, Message, Order, ProfileImage, University, User
 
@@ -153,11 +155,88 @@ def signup(request):
     }
 
     if request.method == 'POST':
+        # TnD agreement is required (new)
+        if not request.POST.get('agree_tnd'):
+            # Create a form to show error, but also add a message
+            form = UserProfileForm(request.POST, request.FILES)
+            # Trigger validation to populate errors
+            form.is_valid()
+            form.add_error(None, 'You must agree to the Terms & Conditions to create an account.')
+            # Fall through to render with error - need to create context
+            universities = University.objects.order_by('name')
+            hostels = Hostel.objects.select_related('university').order_by('university__name', 'name')
+            profile_image_options = {
+                'male': ProfileImage.objects.filter(pfp_type='male').order_by('name'),
+                'female': ProfileImage.objects.filter(pfp_type='female').order_by('name'),
+                'non_binary': ProfileImage.objects.filter(pfp_type='non_binary').order_by('name'),
+            }
+            return render(
+                request,
+                'bunkloop/signup.html',
+                {
+                    'form': form,
+                    'universities': universities,
+                    'hostels': hostels,
+                    'profile_image_options': profile_image_options,
+                },
+            )
         form = UserProfileForm(request.POST, request.FILES)
         if form.is_valid():
             email = form.cleaned_data['email']
-            otp = str(random.randint(100000, 999999))
-            # Persist identity photo bytes so it survives across requests (uploaded file is closed after request)
+            # Enforce session-based verification (guide §13): if email already verified via /api/auth/verify-email-otp/, create account directly
+            verified_email = request.session.get('verified_signup_email')
+            if verified_email and verified_email.strip().lower() == email.strip().lower():
+                # Email already verified via sendotp.email API — create user directly (skip OTP)
+                # Reuse same identity photo handling but bypass OTP generation
+                identity_file = form.cleaned_data.get('identity_photo')
+                identity_bytes = None
+                identity_name = None
+                identity_content_type = None
+                if identity_file:
+                    try:
+                        identity_file.seek(0)
+                    except Exception:
+                        pass
+                    identity_bytes = identity_file.read()
+                    identity_name = getattr(identity_file, 'name', 'identity.jpg')
+                    identity_content_type = getattr(identity_file, 'content_type', 'image/jpeg')
+                from django.core.files.uploadedfile import SimpleUploadedFile as _SUF
+                identity_upload = None
+                if identity_bytes:
+                    identity_upload = _SUF(identity_name or 'identity.jpg', identity_bytes, content_type=identity_content_type or 'image/jpeg')
+                # Direct user creation (guide §12: create after OTP)
+                form_data = form.cleaned_data
+                user = User(
+                    username=form_data['email'].split('@')[0] + '-' + form_data['registration_id'],
+                    email=form_data['email'],
+                    full_name=form_data['full_name'],
+                    registration_id=form_data['registration_id'],
+                    university=form_data['university'],
+                    profile_image=form_data['profile_image'],
+                    contact_number=form_data.get('contact_number', ''),
+                    student_type=form_data.get('student_type', 'day_scholar'),
+                    hostel=form_data.get('hostel'),
+                    gender=form_data.get('gender', ''),
+                    identity_photo=identity_upload,
+                    is_active=True,
+                    email_verified=True,
+                )
+                user.set_password(form_data['password'])
+                user.save()
+                # Clear verification session (guide §13)
+                request.session.pop('verified_signup_email', None)
+                request.session.pop('verified_signup_at', None)
+                # Also clear any pending OTP cache
+                try:
+                    from django.core.cache import cache as _cache
+                    from .email_otp import otp_cache_key as _otp_key
+                    _cache.delete(_otp_key(email))
+                except Exception:
+                    pass
+                messages.success(request, 'Profile created successfully. Please log in.')
+                return redirect('bunkloop:login')
+
+            # Not yet verified — try sendotp.email first (guide §9), fallback to local OTP
             identity_file = form.cleaned_data.get('identity_photo')
             identity_bytes = None
             identity_name = None
@@ -170,27 +249,83 @@ def signup(request):
                 identity_bytes = identity_file.read()
                 identity_name = getattr(identity_file, 'name', 'identity.jpg')
                 identity_content_type = getattr(identity_file, 'content_type', 'image/jpeg')
-            # copy cleaned_data without file object to avoid closed-file issues
             form_data_copy = {k: v for k, v in form.cleaned_data.items() if k != 'identity_photo'}
+            ttl = getattr(settings, 'OTP_TTL_SECONDS', 600)
+
+            # Try sendotp.email service (guide §6) — if API key configured, use it
+            _used_sendotp = False
+            try:
+                from .email_otp import send_email_otp, otp_cache_key
+                from django.core.cache import cache as _cache
+                # This will raise OTPServiceError if key not configured — then fallback to local
+                result = send_email_otp(email, purpose=getattr(settings, 'SENDOTP_PURPOSE_SIGNUP', 'signup'))
+                # Store challenge_id in cache (guide §8) — never store OTP code
+                if result.get('id'):
+                    _cache.set(
+                        otp_cache_key(email),
+                        {
+                            "challenge_id": result.get('id'),
+                            "expires_at": result.get('expires_at'),
+                            "form_data": form_data_copy,
+                            "identity_photo_bytes": identity_bytes,
+                            "identity_photo_name": identity_name,
+                            "identity_photo_content_type": identity_content_type,
+                        },
+                        timeout=ttl,
+                    )
+                    _used_sendotp = True
+                    # Also keep OTP_STORE fallback for verify view compatibility (but without OTP)
+                    OTP_STORE[email] = {
+                        'otp': None,  # No OTP stored when using sendotp.email
+                        'expires_at': timezone.now().timestamp() + ttl,
+                        'form_data': form_data_copy,
+                        'identity_photo_bytes': identity_bytes,
+                        'identity_photo_name': identity_name,
+                        'identity_photo_content_type': identity_content_type,
+                        'challenge_id': result.get('id'),
+                        'via_sendotp': True,
+                    }
+                    if result.get('cooldown'):
+                        messages.info(request, f"An OTP was already sent recently. Retry after {result.get('retry_after')}s.")
+                    else:
+                        messages.success(request, 'Verification code sent to your student email. Please enter the OTP to continue.')
+                    request.session['pending_email'] = email
+                    request.session['pending_registration'] = {'email': email}
+                    return redirect('bunkloop:verify_email')
+            except Exception as _e:
+                # Fallback to local OTP if sendotp.email not configured or failed (dev/test)
+                if not _used_sendotp:
+                    import logging as _log
+                    _log.getLogger(__name__).info(f"sendotp.email not used for {email}: {_e} — falling back to local OTP")
+
+            # Fallback: local OTP generation (dev/test without API key)
+            otp_len = getattr(settings, 'OTP_LENGTH', 6)
+            _otp_start = 10 ** (otp_len - 1)
+            _otp_end = (10 ** otp_len) - 1
+            otp = str(random.randint(_otp_start, _otp_end))
+            ttl = getattr(settings, 'OTP_TTL_SECONDS', 600)
             OTP_STORE[email] = {
                 'otp': otp,
-                'expires_at': timezone.now().timestamp() + 600,
+                'expires_at': timezone.now().timestamp() + ttl,
                 'form_data': form_data_copy,
                 'identity_photo_bytes': identity_bytes,
                 'identity_photo_name': identity_name,
                 'identity_photo_content_type': identity_content_type,
             }
+            ttl_min = ttl // 60
             send_mail(
                 subject='Bunkloop email verification',
-                message=f'Your OTP is {otp}. It is valid for 10 minutes.',
-                from_email='noreply@bunkloop.local',
+                message=f'Your OTP is {otp}. It is valid for {ttl_min} minutes.',
+                from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],
                 fail_silently=True,
             )
-            # For now (dev) also print to console explicitly per request (IST)
-            from django.utils.timezone import localtime
-            expiry = localtime(timezone.now() + timezone.timedelta(seconds=600))
-            print(f"[BunkLoop OTP] {email} -> {otp} (valid 10m, expires {expiry:%d %b %Y %I:%M %p IST})")
+            if settings.DEBUG:
+                from django.utils.timezone import localtime
+                expiry = localtime(timezone.now() + timezone.timedelta(seconds=ttl))
+                print(f"[BunkLoop OTP FALLBACK] {email} -> {otp} (valid {ttl_min}m, expires {expiry:%d %b %Y %I:%M %p IST})")
+                import logging
+                logging.getLogger(__name__).info(f"Fallback OTP for {email} expires at {expiry:%Y-%m-%d %H:%M:%S IST}")
             request.session['pending_email'] = email
             request.session['pending_registration'] = {'email': email}
             messages.success(request, 'Verification code sent to your student email. Please enter the OTP to continue.')
@@ -217,15 +352,76 @@ def verify_email(request):
     if request.method == 'POST':
         entered_otp = request.POST.get('otp', '').strip()
         stored = OTP_STORE.get(pending_email)
-        if not stored:
+        # Also try cache for sendotp.email challenge (guide §8)
+        _cached_challenge = None
+        try:
+            from django.core.cache import cache as _cache
+            from .email_otp import otp_cache_key as _otp_key
+            _cached_challenge = _cache.get(_otp_key(pending_email))
+        except Exception:
+            _cached_challenge = None
+
+        if not stored and not _cached_challenge:
             messages.error(request, 'Verification code expired. Please try again.')
             return redirect('bunkloop:signup')
-        if float(timezone.now().timestamp()) > stored['expires_at']:
-            messages.error(request, 'Verification code expired. Please request a new one.')
-            return redirect('bunkloop:signup')
-        if entered_otp != stored['otp']:
-            messages.error(request, 'Invalid verification code. Please try again.')
-            return render(request, 'bunkloop/verify_email.html', {'email': pending_email})
+
+        # Use stored from OTP_STORE if exists, else from cache (which has form_data for sendotp case)
+        # For sendotp case, stored may have via_sendotp
+        is_via_sendotp = False
+        challenge_id = None
+        if stored and stored.get('via_sendotp'):
+            is_via_sendotp = True
+            challenge_id = stored.get('challenge_id') or (_cached_challenge.get('challenge_id') if _cached_challenge else None)
+        elif _cached_challenge and _cached_challenge.get('challenge_id'):
+            # Fallback: cache has challenge but OTP_STORE not marked via_sendotp (edge)
+            is_via_sendotp = True
+            challenge_id = _cached_challenge.get('challenge_id')
+            # Ensure stored has form_data for user creation
+            if not stored:
+                stored = _cached_challenge
+
+        if is_via_sendotp and challenge_id:
+            # Verify via sendotp.email service (guide §10) — never trust OTP directly
+            try:
+                from .email_otp import verify_email_otp, OTPServiceError
+                result = verify_email_otp(email=pending_email, challenge_id=challenge_id, code=entered_otp, purpose=getattr(settings, 'SENDOTP_PURPOSE_SIGNUP', 'signup'))
+                if not result.get('valid'):
+                    reason = result.get('reason')
+                    msg_map = {
+                        "wrong_code": "Incorrect verification code.",
+                        "expired": "Verification code has expired. Please request a new code.",
+                        "locked": "Too many incorrect attempts. Request a new code.",
+                        "superseded": "This code is no longer active. Please request a new code.",
+                    }
+                    messages.error(request, msg_map.get(reason, "Verification failed. Request a new code if necessary."))
+                    return render(request, 'bunkloop/verify_email.html', {'email': pending_email})
+                # Valid — mark session as verified (guide §13)
+                request.session['verified_signup_email'] = pending_email.strip().lower()
+                from django.utils import timezone as _tz
+                request.session['verified_signup_at'] = _tz.now().isoformat()
+            except Exception as e:
+                # Handle OTPServiceError and others
+                from .email_otp import OTPServiceError as _OTPErr
+                if isinstance(e, _OTPErr):
+                    messages.error(request, str(e))
+                else:
+                    messages.error(request, "Email verification is temporarily unavailable. Please try again.")
+                return render(request, 'bunkloop/verify_email.html', {'email': pending_email})
+        else:
+            # Fallback local OTP (dev/test without API key) — original logic
+            if not stored:
+                messages.error(request, 'Verification code expired. Please try again.')
+                return redirect('bunkloop:signup')
+            if float(timezone.now().timestamp()) > stored['expires_at']:
+                messages.error(request, 'Verification code expired. Please request a new one.')
+                return redirect('bunkloop:signup')
+            if entered_otp != stored['otp']:
+                messages.error(request, 'Invalid verification code. Please try again.')
+                return render(request, 'bunkloop/verify_email.html', {'email': pending_email})
+            # Also mark as verified for session enforcement
+            request.session['verified_signup_email'] = pending_email.strip().lower()
+            from django.utils import timezone as _tz2
+            request.session['verified_signup_at'] = _tz2.now().isoformat()
 
         # Create the user now that OTP is verified
         form_data = stored['form_data']
@@ -253,6 +449,13 @@ def verify_email(request):
         user.set_password(form_data['password'])
         user.save()
         OTP_STORE.pop(pending_email, None)
+        # Also clear cache challenge (guide §8)
+        try:
+            from django.core.cache import cache as _cache2
+            from .email_otp import otp_cache_key as _otp_key2
+            _cache2.delete(_otp_key2(pending_email))
+        except Exception:
+            pass
         request.session.pop('pending_email', None)
         request.session.pop('pending_registration', None)
         messages.success(request, 'Profile created successfully. Please log in.')
@@ -363,6 +566,11 @@ def university_list(request):
     from django.db.models import Count
     universities = universities.annotate(student_count=Count('students'))
     return render(request, 'bunkloop/universities.html', {'universities': universities})
+
+
+def terms_view(request):
+    """Terms and Conditions page (TnD) — per user request."""
+    return render(request, 'bunkloop/terms.html')
 
 
 def _get_current_user(request):

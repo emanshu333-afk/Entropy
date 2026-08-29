@@ -1,5 +1,7 @@
 {% extends "bunkloop/base.html" %}
+{% load static %}
 {% block title %}Orders | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/orders.css' %}">{% endblock %}
 {% block content %}
 <section class="page">
     <div class="browse-heading">
@@ -55,4 +57,6 @@
         </div>
     </div>
 </section>
+{% block extra_js %}<script src="{% static 'js/pages/orders.js' %}"></script>{% endblock %}
+
 {% endblock %}

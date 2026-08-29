@@ -1,7 +1,13 @@
 from django.db.models import Q
 
 def nav_counts(request):
-    reg_id = request.session.get('user_registration_id')
+    # Guard for error pages / requests without session (e.g., 404 via RequestFactory)
+    if not hasattr(request, 'session'):
+        return {}
+    try:
+        reg_id = request.session.get('user_registration_id')
+    except Exception:
+        return {}
     if not reg_id:
         return {}
     try:

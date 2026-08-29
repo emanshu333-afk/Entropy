@@ -1,5 +1,7 @@
 {% extends "bunkloop/base.html" %}
+{% load static %}
 {% block title %}Universities & Domains | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/universities.css' %}">{% endblock %}
 {% block content %}
 <section class="page">
     <div class="browse-heading">
@@ -58,4 +60,6 @@
         <strong style="color:var(--ink);">How verification works:</strong> On signup, your selected university's <code>domains</code> list is checked first. Example: <code>Thapar University — thapar.edu</code> only allows <code>you@thapar.edu</code> or <code>you@mail.thapar.edu</code>. If a university has no domains, fallback to generic academic check (<code>.edu</code>, <code>.ac.</code>) + MX lookup. Denied public domains (<code>gmail.com</code> etc.) are always blocked. Manage domains at <code>/admin → Universities → Domains (comma-separated)</code>.
     </div>
 </section>
+{% block extra_js %}<script src="{% static 'js/pages/universities.js' %}"></script>{% endblock %}
+
 {% endblock %}

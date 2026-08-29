@@ -127,9 +127,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- JS is the key factor: link stays same, data comes as JSON from WSGI/DRF, JS breaks it down ---
     // Fetch history via REST (WSGI) as JSON and render without changing URL (plan §42)
-    async function fetchHistory() {
+    // URL remains /messages/<id>/ — no ?before in address bar, JS handles pagination in memory
+    async function fetchHistory(beforeId = null, appendMode = "replace") {
         try {
-            const res = await fetch(`/api/chat/conversations/${wsId}/messages/?limit=50`, {
+            let url = `/api/chat/conversations/${wsId}/messages/?limit=50`;
+            if (beforeId) url += `&before=${beforeId}`;
+            const res = await fetch(url, {
                 headers: { "Accept": "application/json" },
                 credentials: "same-origin"
             });
@@ -137,13 +140,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await res.json();
             // DRF CursorPagination returns {results: [...]}, direct list returns [...]
             const msgs = Array.isArray(data) ? data : (data.results || data);
-            // Clear existing server-rendered (keep empty placeholder if no msgs)
-            // But keep URL same — no pushState, just DOM update
-            if (msgs.length > 0) {
-                // Remove all current message rows and empty placeholder, then re-render from JSON
+            if (msgs.length === 0 && appendMode === "prepend") {
+                setStatus("No older messages", false);
+                return;
+            }
+            if (appendMode === "replace" && msgs.length > 0) {
+                // Clear existing server-rendered (keep empty placeholder if no msgs)
+                // But keep URL same — no pushState, just DOM update
                 messagesEl.innerHTML = "";
                 msgs.forEach(m => {
-                    // Use same deduplication as live
                     const isOwn = m.sender?.id === parseInt(chatContainer.dataset.currentUserId, 10) ||
                                   m.sender_id === parseInt(chatContainer.dataset.currentUserId, 10) ||
                                   m.sender_registration_id === chatContainer.dataset.currentRegistrationId;
@@ -157,15 +162,76 @@ document.addEventListener("DOMContentLoaded", () => {
                         sender_registration_id: m.sender?.registration_id || m.sender_registration_id,
                         created_at: m.created_at
                     }, isOwn);
-                    // Mark DOM id for deduplication
                     const last = messagesEl.lastElementChild;
                     if (last) last.setAttribute("data-message-id", m.id);
                 });
                 scrollToBottom();
+            } else if (appendMode === "prepend") {
+                // Prepend older messages at top without changing URL (history stays same)
+                const scrollHeightBefore = messagesEl.scrollHeight;
+                // Remove empty placeholder if present
+                const empty = messagesEl.querySelector("[data-empty]");
+                if (empty) empty.remove();
+                // msgs are in chronological order (oldest first) from service; we need to prepend in order
+                // Our service returns oldest first for limit, so we prepend in reverse to keep order
+                const fragment = document.createDocumentFragment();
+                // Create temp container to build rows, then prepend
+                msgs.forEach(m => {
+                    const isOwn = m.sender?.id === parseInt(chatContainer.dataset.currentUserId, 10) ||
+                                  m.sender_id === parseInt(chatContainer.dataset.currentUserId, 10);
+                    // Build row
+                    const row = document.createElement("div");
+                    row.setAttribute("data-message-id", m.id);
+                    row.style.display = "flex";
+                    row.style.justifyContent = isOwn ? "flex-end" : "flex-start";
+                    const bubble = document.createElement("div");
+                    bubble.style.maxWidth = "72%";
+                    bubble.style.padding = "10px 14px";
+                    bubble.style.borderRadius = "14px";
+                    bubble.style.fontSize = "14px";
+                    if (isOwn) {
+                        bubble.style.background = "var(--coral)";
+                        bubble.style.color = "#fff";
+                    } else {
+                        bubble.style.background = "#fff";
+                        bubble.style.border = "1px solid var(--line)";
+                    }
+                    const text = document.createElement("div");
+                    text.innerHTML = (m.content || m.body || "").replace(/\n/g, "<br>");
+                    bubble.appendChild(text);
+                    const meta = document.createElement("div");
+                    meta.style.fontSize = "10px";
+                    meta.style.opacity = "0.75";
+                    const senderName = m.sender?.name || (isOwn ? "You" : "Seller");
+                    const createdAt = m.created_at ? new Date(m.created_at).toLocaleString() : "";
+                    meta.textContent = `${senderName} · ${createdAt}`;
+                    bubble.appendChild(meta);
+                    row.appendChild(bubble);
+                    fragment.appendChild(row);
+                });
+                messagesEl.prepend(fragment);
+                // Keep scroll position
+                messagesEl.scrollTop = messagesEl.scrollHeight - scrollHeightBefore;
+                setStatus(`Loaded ${msgs.length} older messages — link still /messages/${conversationId}/`, false);
             }
         } catch (e) {
             console.error("history fetch failed", e);
         }
+    }
+
+    // Load older handler — link stays same, JS fetches ?before via REST and prepends
+    const loadOlderBtn = document.querySelector("[data-load-older]");
+    if (loadOlderBtn) {
+        loadOlderBtn.addEventListener("click", () => {
+            const firstMsg = messagesEl.querySelector("[data-message-id]");
+            const beforeId = firstMsg ? firstMsg.getAttribute("data-message-id") : null;
+            if (!beforeId) {
+                setStatus("No older messages", false);
+                return;
+            }
+            // Fetch older via WSGI JSON, JS breaks down and prepends — URL does NOT change
+            fetchHistory(beforeId, "prepend");
+        });
     }
 
     // Intercept form submit — ALWAYS via JS (WebSocket or REST fetch), never full page reload

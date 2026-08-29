@@ -24,55 +24,84 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-change-me')
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() not in ('false', '0', 'no')
 
-# Allow local + network device 192.168.137.36 (new LAN) and any host in DEBUG
-_default_hosts = 'localhost,127.0.0.1,testserver,0.0.0.0,192.168.137.36'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-change-me'
+    else:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set when DEBUG=False')
+elif not DEBUG and SECRET_KEY in ('django-insecure-change-me', 'django-insecure-change-me-for-dev'):
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured('Insecure DJANGO_SECRET_KEY not allowed when DEBUG=False')
+
+# Hosts — no hard-coded LAN IP; use env or auto-discovery
+_default_hosts = 'localhost,127.0.0.1,testserver'
 if DEBUG:
-    # In development allow any host so peer on 192.168.137.x works without env change
+    # In development allow any host so peers on LAN work without env change
     ALLOWED_HOSTS = ['*']
-    # Still parse env for explicit list if provided, but ensure '*' is present
     env_hosts = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', _default_hosts).split(',') if h.strip()]
     if env_hosts and '*' not in ALLOWED_HOSTS:
-        # keep parsed list merged when user provided specific hosts
         ALLOWED_HOSTS = list(set(ALLOWED_HOSTS + env_hosts))
 else:
     ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', _default_hosts).split(',') if h.strip()]
 
-# Auto-add this host's LAN IP when possible so peer can reach via http://<LAN_IP>:8000
+# Auto-add this host's LAN IP for convenience (dynamic, not hard-coded)
+# Uses env LAN_DISCOVERY_IP (default 8.8.8.8) to find LAN IP without hard-coding dev IP
 try:
     import socket
+    _discovery_ip = os.environ.get('LAN_DISCOVERY_IP', '8.8.8.8')
+    _discovery_port = int(os.environ.get('LAN_DISCOVERY_PORT', '80'))
     _local_ip = socket.gethostbyname(socket.gethostname())
-    if _local_ip not in ALLOWED_HOSTS and '*' not in ALLOWED_HOSTS:
+    if _local_ip not in ALLOWED_HOSTS and '*' not in ALLOWED_HOSTS and _local_ip != '127.0.0.1':
         ALLOWED_HOSTS.append(_local_ip)
-    # also try UDP trick for more reliable LAN IP
     _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        _s.connect(('8.8.8.8', 80))
+        _s.connect((_discovery_ip, _discovery_port))
         _lan = _s.getsockname()[0]
-        if _lan not in ALLOWED_HOSTS and '*' not in ALLOWED_HOSTS:
+        if _lan not in ALLOWED_HOSTS and '*' not in ALLOWED_HOSTS and _lan != '127.0.0.1':
             ALLOWED_HOSTS.append(_lan)
     finally:
         _s.close()
 except Exception:
     pass
 
-# CSRF must trust the network origins when accessing via IP:port
+# CSRF must trust the network origins when accessing via IP:port — env-driven, no hard-coded LAN IP
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
-    'http://localhost:8000,http://127.0.0.1:8000,http://0.0.0.0:8000,http://192.168.137.36:8000,http://192.168.137.36:3000'
+    'http://localhost:8000,http://127.0.0.1:8000'
 ).split(',') if o.strip()]
 if DEBUG and '*' in ALLOWED_HOSTS:
-    # Allow LAN CSRF origins in dev
-    for _host in ['192.168.137.36', '0.0.0.0']:
-        for _scheme in ['http', 'https']:
-            for _port in ['8000', '3000', '8080']:
-                _origin = f'{_scheme}://{_host}:{_port}'
-                if _origin not in CSRF_TRUSTED_ORIGINS:
-                    CSRF_TRUSTED_ORIGINS.append(_origin)
+    # Dynamically add LAN CSRF origins based on discovered IPs (not hard-coded)
+    try:
+        import socket as _csock
+        _candidates = set()
+        try:
+            _candidates.add(_csock.gethostbyname(_csock.gethostname()))
+        except Exception:
+            pass
+        try:
+            _s2 = _csock.socket(_csock.AF_INET, _csock.SOCK_DGRAM)
+            try:
+                _s2.connect((os.environ.get('LAN_DISCOVERY_IP', '8.8.8.8'), int(os.environ.get('LAN_DISCOVERY_PORT', '80'))))
+                _candidates.add(_s2.getsockname()[0])
+            finally:
+                _s2.close()
+        except Exception:
+            pass
+        for _host in _candidates:
+            if not _host or _host == '127.0.0.1' or _host in ALLOWED_HOSTS and '*' in ALLOWED_HOSTS:
+                continue
+            for _scheme in ['http', 'https']:
+                for _port in ['8000', '3000', '8080']:
+                    _origin = f'{_scheme}://{_host}:{_port}'
+                    if _origin not in CSRF_TRUSTED_ORIGINS:
+                        CSRF_TRUSTED_ORIGINS.append(_origin)
+        # Also allow 0.0.0.0 origins are NOT valid Origin headers — don't add them
+    except Exception:
+        pass
 
 # Security hardening when not DEBUG
 if not DEBUG:
@@ -272,6 +301,26 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@bunkloop.local')
 
+# Email validation — env-driven (was hard-coded denied list + academic heuristic)
+ALLOWED_EMAIL_DENIED_DOMAINS = [d.strip().lower() for d in os.environ.get('ALLOWED_EMAIL_DENIED_DOMAINS', 'gmail.com,yahoo.com,outlook.com,hotmail.com,icloud.com,aol.com').split(',') if d.strip()]
+# Comma-separated substrings that indicate academic domain; e.g. ".edu,.ac.,university,edu." (was hard-coded)
+ALLOWED_ACADEMIC_SUFFIXES = [s.strip().lower() for s in os.environ.get('ALLOWED_ACADEMIC_SUFFIXES', '.edu,.ac.,university,edu.').split(',') if s.strip()]
+
+# OTP — env-driven (was hard-coded 6 digits, 600s)
+OTP_LENGTH = int(os.environ.get('OTP_LENGTH', '6'))
+OTP_TTL_SECONDS = int(os.environ.get('OTP_TTL_SECONDS', '600'))
+
+# Chat — env-driven (was hard-coded 5000, 30/min, 100)
+CHAT_MAX_MESSAGE_LENGTH = int(os.environ.get('CHAT_MAX_MESSAGE_LENGTH', '5000'))
+CHAT_RATE_LIMIT_PER_MINUTE = int(os.environ.get('CHAT_RATE_LIMIT_PER_MINUTE', '30'))
+CHAT_PAGINATION_MAX_LIMIT = int(os.environ.get('CHAT_PAGINATION_MAX_LIMIT', '100'))
+
+# OTP via sendotp.email — per BunkLoop_SendOTP_Email_Integration_Guide.md
+# Env var is `otp_email_key` (do not rename, never expose to frontend)
+OTP_EMAIL_API_KEY = os.getenv('otp_email_key') or os.getenv('OTP_EMAIL_API_KEY') or os.getenv('SENDOTP_API_KEY')
+SENDOTP_BASE_URL = os.getenv('SENDOTP_BASE_URL', 'https://api.sendotp.email')
+SENDOTP_PURPOSE_SIGNUP = os.getenv('SENDOTP_PURPOSE_SIGNUP', 'signup')
+
 # Payments env (mock by default)
 RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', '')
 RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', '')
@@ -279,6 +328,26 @@ STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Cache — for OTP challenge ID (guide §8); uses Redis if available, else locmem
+# Don't hard-code Redis host; reuse REDIS_URL/REDIS_HOST logic above
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'bunkloop-otp',
+    }
+}
+# If Redis is configured (Docker or local Redis), prefer RedisCache
+if REDIS_URL and 'test' not in sys.argv:
+    try:
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+                'LOCATION': REDIS_URL,
+            }
+        }
+    except Exception:
+        pass
 
 # Logging for deployment health
 LOGGING = {

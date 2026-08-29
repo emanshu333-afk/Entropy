@@ -1,5 +1,7 @@
 {% extends "bunkloop/base.html" %}
+{% load static %}
 {% block title %}Order #{{ order.pk }} | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/order_detail.css' %}">{% endblock %}
 {% block content %}
 <section class="page narrow-page">
     <a href="{% url 'bunkloop:order_list' %}" style="color:var(--muted); font-size:13px;">← Back to orders</a>
@@ -60,4 +62,6 @@
         </div>
     </div>
 </section>
+{% block extra_js %}<script src="{% static 'js/pages/order_detail.js' %}"></script>{% endblock %}
+
 {% endblock %}

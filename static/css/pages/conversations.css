@@ -1,0 +1,81 @@
+/* UTF-8 — conversations.css — per-page styles for conversations.html */
+@charset "UTF-8";
+
+.chat-card {
+    margin-top: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+
+.chat-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #fff2ed 0%, #fffaf7 100%);
+}
+
+
+.chat-load-more {
+    text-align: center;
+    padding: 8px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+}
+
+
+.chat-messages {
+    padding: 20px;
+    display: grid;
+    gap: 14px;
+    min-height: 260px;
+    max-height: 420px;
+    overflow-y: auto;
+    background: var(--paper);
+}
+
+
+.chat-message-row {
+    display: flex;
+}
+
+
+.chat-bubble {
+    max-width: 72%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+
+.chat-empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 30px 0;
+}
+
+
+.chat-input-area {
+    padding: 16px 20px;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+}
+
+
+.chat-form {
+    display: flex;
+    gap: 8px;
+    align-items: end;
+}
+
+
+.chat-input-area {
+    padding: 16px 20px;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+}
+

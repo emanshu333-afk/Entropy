@@ -1,5 +1,7 @@
 {% extends "bunkloop/base.html" %}
+{% load static %}
 {% block title %}Browse marketplace | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/home.css' %}">{% endblock %}
 {% block content %}
 <section class="page browse-page">
     <div class="browse-heading">
@@ -21,11 +23,11 @@
                 <a href="{% url 'bunkloop:home' %}?{% if q %}q={{ q }}&{% endif %}category={{ category.pk }}" class="chip {% if active_category and active_category.pk == category.pk %}active{% endif %}">{{ category.name }}</a>
             {% endfor %}
         </div>
-        <button type="submit" class="button button-small button-secondary" style="max-width:120px;">Search</button>
+        <button type="submit" class="button button-small button-secondary home-search-btn">Search</button>
     </form>
     {% if q or active_category %}
-        <div style="margin-top:12px; color:var(--muted); font-size:13px;">
-            Showing {% if q %}results for "<strong>{{ q }}</strong>"{% endif %} {% if active_category %}in <strong>{{ active_category.name }}</strong>{% endif %} — <a href="{% url 'bunkloop:home' %}" style="color:var(--coral);">Clear filters</a>
+        <div class="home-filter-status">
+            Showing {% if q %}results for "<strong>{{ q }}</strong>"{% endif %} {% if active_category %}in <strong>{{ active_category.name }}</strong>{% endif %} — <a href="{% url 'bunkloop:home' %}" class="home-clear-link">Clear filters</a>
         </div>
     {% endif %}
     <div class="results-heading">
@@ -54,3 +56,4 @@
     </div>
 </section>
 {% endblock %}
+{% block extra_js %}<script src="{% static 'js/pages/home.js' %}"></script>{% endblock %}

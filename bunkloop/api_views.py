@@ -121,8 +121,10 @@ class MessageListAPIView(generics.ListCreateAPIView):
         limit = self.request.query_params.get('limit', '50')
         before = self.request.query_params.get('before')
         try:
+            from django.conf import settings as _s
+            max_limit = getattr(_s, 'CHAT_PAGINATION_MAX_LIMIT', 100)
             limit = int(limit)
-            limit = max(1, min(limit, 100))
+            limit = max(1, min(limit, max_limit))
         except Exception:
             limit = 50
         # Use service for pagination
@@ -164,13 +166,41 @@ class MessageListAPIView(generics.ListCreateAPIView):
         limit = request.query_params.get('limit', '50')
         before = request.query_params.get('before')
         try:
+            from django.conf import settings as _s
+            max_limit = getattr(_s, 'CHAT_PAGINATION_MAX_LIMIT', 100)
             limit = int(limit)
-            limit = max(1, min(limit, 100))
+            limit = max(1, min(limit, max_limit))
         except Exception:
             limit = 50
         messages = get_conversation_messages(conversation, limit=limit, before_id=before)
         serializer = self.get_serializer(messages, many=True)
         return Response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        # REST fallback for sending message (JS without WebSocket) — WSGI sends JSON, JS breaks it down
+        conversation_id = self.kwargs.get('conversation_pk') or self.kwargs.get('pk')
+        conversation = self._get_conversation(conversation_id)
+        if not conversation:
+            return Response({"error": "Conversation not found or access denied"}, status=status.HTTP_404_NOT_FOUND)
+        # Membership + university checks
+        from .services import ensure_conversation_member, create_message
+        try:
+            ensure_conversation_member(conversation, request.user)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        if conversation.university_id and request.user.university_id and conversation.university_id != request.user.university_id:
+            return Response({"error": "University isolation"}, status=status.HTTP_403_FORBIDDEN)
+        content = request.data.get('content') or request.data.get('body') or ''
+        message_type = request.data.get('message_type', 'text')
+        media_url = request.data.get('media_url', '')
+        try:
+            msg = create_message(conversation=conversation, sender=request.user, content=content, message_type=message_type, media_url=media_url)
+        except ValidationError as e:
+            return Response({"error": str(e.message) if hasattr(e, 'message') else str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(msg)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class MarkReadAPIView(APIView):

@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-bunkloop_db}
       POSTGRES_USER: ${DB_USER:-bunkloop}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-BunkLoop@2026}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env - no default}
     ports:
       - "5432:5432"
     volumes:
@@ -42,19 +42,21 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-change-me-for-dev}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY must be set in .env}
       DJANGO_DEBUG: ${DJANGO_DEBUG:-False}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,testserver,0.0.0.0,192.168.137.36}
-      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000,http://0.0.0.0:8000,http://192.168.137.36:8000}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,testserver}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
       DB_ENGINE: django.db.backends.postgresql
       DB_NAME: ${DB_NAME:-bunkloop_db}
       DB_USER: ${DB_USER:-bunkloop}
-      DB_PASSWORD: ${DB_PASSWORD:-BunkLoop@2026}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       DB_HOST: db
       DB_PORT: 5432
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_URL: redis://redis:6379/0
+      otp_email_key: ${otp_email_key:-}
+      SENDOTP_BASE_URL: ${SENDOTP_BASE_URL:-https://api.sendotp.email}
       EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}

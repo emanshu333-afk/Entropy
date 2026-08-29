@@ -1,0 +1,99 @@
+/* UTF-8 — item_form.css — per-page styles for item_form.html */
+@charset "UTF-8";
+
+.listing-type-field {
+    padding: 0;
+    border: 0;
+}
+
+
+.choice-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+
+.choice-card {
+    display: flex;
+    min-height: 68px;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+
+.input-with-prefix {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: #fcfbf8;
+}
+
+
+.photo-upload {
+    padding: 16px;
+    border: 1px dashed #c9c5ba;
+    border-radius: 6px;
+    background: #fcfbf8;
+}
+
+
+.upload-button {
+    display: flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    border-radius: 5px;
+    color: var(--coral);
+    background: var(--coral-soft);
+    cursor: pointer;
+    text-align: center;
+}
+
+
+.photo-preview {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+}
+
+
+.pfp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
+    gap: 10px;
+}
+
+
+.pfp-option {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    padding: 8px 6px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+    text-align: center;
+    transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+
+
+.pfp-preview {
+    display: block;
+    width: 58px;
+    height: 58px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--mint);
+}
+

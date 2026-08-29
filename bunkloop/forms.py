@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 
 import dns.resolver
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from email_validator import EmailNotValidError, validate_email
 
@@ -34,7 +35,7 @@ def validate_student_email(email):
     if not domain or '.' not in domain:
         raise ValidationError('Please enter a valid university email domain.')
 
-    denied_domains = {'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'aol.com'}
+    denied_domains = set(getattr(settings, 'ALLOWED_EMAIL_DENIED_DOMAINS', ['gmail.com','yahoo.com','outlook.com','hotmail.com','icloud.com','aol.com']))
     if domain in denied_domains:
         raise ValidationError('Please use a valid university or student email address.')
 
@@ -42,7 +43,13 @@ def validate_student_email(email):
     in_allowlist = _is_domain_in_university_allowlist(domain)
 
     if not in_allowlist:
-        if not (domain.endswith('.edu') or '.ac.' in domain or 'university' in domain or 'edu.' in domain):
+        academic_suffixes = getattr(settings, 'ALLOWED_ACADEMIC_SUFFIXES', ['.edu','.ac.','university','edu.'])
+        # Check if any suffix matches (supports .edu endswith or substring)
+        is_academic = any(
+            (suf.startswith('.') and domain.endswith(suf)) or (suf in domain)
+            for suf in academic_suffixes
+        )
+        if not is_academic:
             raise ValidationError('Only university or academic student email domains are allowed. If your university uses a custom domain, ask admin to add it to the University domains list.')
 
     try:

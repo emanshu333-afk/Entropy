@@ -4,9 +4,12 @@ from django.db import transaction
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
 
+from django.conf import settings
+
 from .models import Conversation, ConversationMember, Message
 
-MAX_TEXT_LENGTH = 5000
+# Env-driven limits (was hard-coded 5000, 100, 30)
+MAX_TEXT_LENGTH = getattr(settings, 'CHAT_MAX_MESSAGE_LENGTH', 5000)
 
 
 def get_or_create_listing_conversation(buyer, seller, item):
@@ -90,6 +93,9 @@ def get_user_conversations(user):
 
 def get_conversation_messages(conversation, limit=50, before_id=None):
     """Paginated message history (plan §10). Ordered DESC limit."""
+    from django.conf import settings as _s
+    max_limit = getattr(_s, 'CHAT_PAGINATION_MAX_LIMIT', 100)
+    limit = max(1, min(limit, max_limit))
     qs = Message.objects.filter(conversation=conversation, deleted_at__isnull=True).select_related('sender').order_by('-created_at')
     if before_id:
         try:
@@ -104,11 +110,13 @@ def get_conversation_messages(conversation, limit=50, before_id=None):
 
 def create_message(conversation, sender, content, message_type='text', media_url=''):
     """Validate and persist message (plan §15)."""
+    from django.conf import settings as _s
+    max_len = getattr(_s, 'CHAT_MAX_MESSAGE_LENGTH', 5000)
     content = (content or '').strip()
     if not content and message_type == 'text':
         raise ValidationError("Message cannot be empty.")
-    if len(content) > MAX_TEXT_LENGTH:
-        raise ValidationError(f"Message too long (max {MAX_TEXT_LENGTH} chars).")
+    if len(content) > max_len:
+        raise ValidationError(f"Message too long (max {max_len} chars).")
     # Membership check
     ensure_conversation_member(conversation, sender)
     # University isolation

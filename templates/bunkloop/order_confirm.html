@@ -1,5 +1,7 @@
 {% extends "bunkloop/base.html" %}
+{% load static %}
 {% block title %}Confirm Order | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/order_confirm.css' %}">{% endblock %}
 {% block content %}
 <section class="page narrow-page">
     <div class="form-card" style="max-width:560px; margin:0 auto;">
@@ -24,4 +26,6 @@
         </form>
     </div>
 </section>
+{% block extra_js %}<script src="{% static 'js/pages/order_confirm.js' %}"></script>{% endblock %}
+
 {% endblock %}

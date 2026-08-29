@@ -12,28 +12,29 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pages/base.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     <div class="site-shell">
         <header class="topbar">
             <a class="brand" href="{% url 'bunkloop:home' %}" aria-label="Bunkloop home">
-                <img class="brand-logo" src="{% static 'images/logo.png' %}" alt="Bunkloop logo" onerror="this.style.display='none'">
+                <img class="brand-logo" src="{% static 'images/logo.png' %}" alt="Bunkloop logo">
             </a>
             <nav class="topnav" aria-label="Main navigation">
                 <a href="{% url 'bunkloop:home' %}">Browse</a>
                 <a href="{% url 'bunkloop:my_items' %}">My items</a>
                 <a href="{% url 'bunkloop:item_create' %}">Post an item</a>
-                <a href="{% url 'bunkloop:conversation_list' %}">Messages {% if nav_unread_count %}<span style="background:var(--coral); color:#fff; padding:2px 6px; border-radius:999px; font-size:11px; font-weight:700;">{{ nav_unread_count }}</span>{% endif %}</a>
-                <a href="{% url 'bunkloop:order_list' %}">Orders {% if nav_pending_orders %}<span style="background:#1a6b46; color:#fff; padding:2px 6px; border-radius:999px; font-size:11px; font-weight:700;">{{ nav_pending_orders }}</span>{% endif %}</a>
+                <a href="{% url 'bunkloop:conversation_list' %}">Messages {% if nav_unread_count %}<span class="nav-badge">{{ nav_unread_count }}</span>{% endif %}</a>
+                <a href="{% url 'bunkloop:order_list' %}">Orders {% if nav_pending_orders %}<span class="nav-badge nav-badge--pending">{{ nav_pending_orders }}</span>{% endif %}</a>
                 <a href="{% url 'bunkloop:university_list' %}">Universities</a>
             </nav>
             <a class="button button-small button-primary" href="{% url 'bunkloop:profile' %}">Profile</a>
         </header>
         {% if messages %}
-            <div style="width:min(1080px,100%); margin:16px auto 0; padding:0 clamp(20px,5vw,72px); display:grid; gap:8px;">
+            <div class="messages-container">
                 {% for message in messages %}
-                    <div class="form-errors" style="margin:0; {% if message.tags == 'success' %}background:var(--mint); color:#1a6b46;{% endif %}">{{ message }}</div>
+                    <div class="form-errors form-errors--flush {% if message.tags == 'success' %}form-errors--success{% endif %}">{{ message }}</div>
                 {% endfor %}
             </div>
         {% endif %}
@@ -41,6 +42,29 @@
             {% block content %}{% endblock %}
         </main>
     </div>
-    {% block extra_js %}{% endblock %}
+
+    <!-- Global progress bar for slow OTP / form submissions (signup → verify) -->
+    <div id="progress-bar" class="progress-bar" aria-hidden="true"><div class="progress-bar__inner"></div></div>
+    <div id="progress-overlay" class="progress-overlay" hidden>
+        <div class="progress-overlay__card">
+            <div class="progress-overlay__spinner"></div>
+            <div style="font-weight:700;">Sending OTP…</div>
+            <div style="color:var(--muted); font-size:13px; margin-top:4px;">This may take a few seconds. Please don’t close the page.</div>
+        </div>
+    </div>
+
+    <!-- Cookie banner — appears on home (/) every visit until Accept -->
+    <div id="cookie-banner" hidden class="cookie-banner">
+        <div class="cookie-banner__title">We use cookies</div>
+        <div class="cookie-banner__text">We use cookies for authentication and to improve your campus marketplace experience. See our <a href="{% url 'bunkloop:terms' %}" class="cookie-banner__link">Terms & Conditions</a>.</div>
+        <div class="cookie-banner__actions">
+            <button type="button" class="button button-secondary button-small" data-cookie-later>Ask me later</button>
+            <button type="button" class="button button-primary button-small" data-cookie-accept>Accept</button>
+        </div>
+    </div>
+
+    {% block extra_js %}<script src="{% static 'js/pages/base.js' %}"></script>{% endblock %}
+    <script src="{% static 'js/cookie_banner.js' %}"></script>
+    <script src="{% static 'js/ui.js' %}"></script>
 </body>
 </html>

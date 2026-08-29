@@ -1,5 +1,7 @@
 {% extends 'bunkloop/base.html' %}
+{% load static %}
 {% block title %}Profile | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/profile.css' %}">{% endblock %}
 {% block content %}
 <section class="page narrow-page">
     <div class="eyebrow">Your student profile</div>
@@ -8,17 +10,13 @@
         <div style="display:flex; gap:16px; align-items:center; margin:18px 0;">
             {% if user.profile_image %}
                 <img src="{% if user.profile_image.image %}{{ user.profile_image.image.url }}{% else %}{{ user.profile_image.image_url }}{% endif %}" alt="{{ user.profile_image.name }}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid var(--line);">
-                <div>
-                    <div style="font-weight:700;">{{ user.profile_image.name }}</div>
-                    <div style="color:var(--muted); font-size:12px;">{{ user.profile_image.pfp_type|title }}</div>
-                </div>
             {% endif %}
             <span style="padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700; background:{% if user.email_verified %}var(--mint); color:#1a6b46;{% else %}#fde8e8; color:#8d2d20;{% endif %}">{% if user.email_verified %}✓ Email verified{% else %}✗ Not verified{% endif %}</span>
         </div>
         <dl class="detail-list">
+            <div><dt>Full name</dt><dd>{{ user.full_name }}</dd></div>
             <div><dt>Registration ID</dt><dd>{{ user.registration_id }}</dd></div>
             <div><dt>Email</dt><dd>{{ user.email }} {% if user.email_verified %}<span style="color:#1a6b46; font-size:11px;">(verified)</span>{% endif %}</dd></div>
-            <div><dt>Full name</dt><dd>{{ user.full_name }}</dd></div>
             <div><dt>Gender</dt><dd>{{ user.gender|default:'Not set'|title }}</dd></div>
             <div><dt>University</dt><dd>{{ user.university.name|default:'Not set' }} {% if user.university and user.university.domains %}<br><span style="color:var(--muted); font-size:11px;">Allowed: {{ user.university.get_domains_display }}</span>{% endif %}</dd></div>
             <div><dt>Student type</dt><dd>{{ user.student_type|title }}</dd></div>
@@ -36,4 +34,6 @@
         </div>
     </div>
 </section>
+{% block extra_js %}<script src="{% static 'js/pages/profile.js' %}"></script>{% endblock %}
+
 {% endblock %}

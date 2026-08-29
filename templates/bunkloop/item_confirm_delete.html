@@ -1,5 +1,7 @@
 {% extends "bunkloop/base.html" %}
+{% load static %}
 {% block title %}Remove {{ item.title }} | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/item_confirm_delete.css' %}">{% endblock %}
 {% block content %}
 <section class="page narrow-page">
     <div class="form-card" style="max-width:520px; margin:0 auto; text-align:center;">
@@ -18,4 +20,6 @@
         </form>
     </div>
 </section>
+{% block extra_js %}<script src="{% static 'js/pages/item_confirm_delete.js' %}"></script>{% endblock %}
+
 {% endblock %}

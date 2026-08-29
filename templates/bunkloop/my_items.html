@@ -1,5 +1,7 @@
 {% extends 'bunkloop/base.html' %}
+{% load static %}
 {% block title %}My items | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/my_items.css' %}">{% endblock %}
 {% block content %}
 <section class="page browse-page">
     <div class="browse-heading">
@@ -46,4 +48,6 @@
         {% endfor %}
     </div>
 </section>
+{% block extra_js %}<script src="{% static 'js/pages/my_items.js' %}"></script>{% endblock %}
+
 {% endblock %}

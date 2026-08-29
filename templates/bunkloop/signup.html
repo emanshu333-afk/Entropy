@@ -1,6 +1,7 @@
 {% extends "bunkloop/base.html" %}
 {% load static %}
 {% block title %}Create your profile | Bunkloop{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/signup.css' %}">{% endblock %}
 {% block content %}
 <section class="page narrow-page auth-shell">
     <div class="auth-card auth-card--split">
@@ -18,7 +19,7 @@
             <div class="eyebrow">Create your profile</div>
             <h2>Student sign up</h2>
             <p class="intro">A few details help people know they are buying from someone nearby.</p>
-            <form class="form-card auth-form" method="post" enctype="multipart/form-data">
+            <form id="signup-form" class="form-card auth-form" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 {% if form.errors %}
                     <div class="form-errors">
@@ -104,9 +105,21 @@
                     </div>
                     <div class="field field-wide">
                         <label for="id_email">Student email</label>
-                        <input id="id_email" name="email" type="email" autocomplete="email" required value="{{ form.email.value|default:'' }}">
+                        <div style="display:flex; gap:8px;">
+                            <input id="id_email" name="email" type="email" autocomplete="email" required value="{{ form.email.value|default:'' }}" style="flex:1;">
+                            <button type="button" class="button button-secondary" data-send-otp style="white-space:nowrap;">Send OTP</button>
+                        </div>
                         <span class="field-help" data-email-domains-help>Use your university email domain for verification.</span>
+                        <div data-otp-status style="margin-top:8px; font-size:13px;"></div>
                         {% if form.email.errors %}<div class="form-errors" style="margin-top:6px; padding:6px 8px; font-size:12px;">{{ form.email.errors }}</div>{% endif %}
+                    </div>
+                    <div class="field field-wide" data-verify-section hidden>
+                        <label for="id_otp_api">Enter OTP</label>
+                        <div style="display:flex; gap:8px;">
+                            <input id="id_otp_api" data-otp-input type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit code" style="flex:1;">
+                            <button type="button" class="button button-primary" data-verify-otp>Verify</button>
+                            <button type="button" class="button button-secondary" data-resend-otp>Resend</button>
+                        </div>
                     </div>
                     <div class="field">
                         <label for="id_password">Password</label>
@@ -133,14 +146,22 @@
                             <option value="prefer_not_to_say">Prefer not to say</option>
                         </select>
                     </div>
+                    <div class="field field-wide">
+                        <label style="display:flex; gap:8px; align-items:center; font-weight:400; font-size:13px;">
+                            <input type="checkbox" name="agree_tnd" required style="width:auto; min-height:auto; accent-color:var(--coral);">
+                            <span>I agree to the <a href="{% url 'bunkloop:terms' %}" target="_blank" style="color:var(--coral); text-decoration:underline;">Terms &amp; Conditions</a></span>
+                        </label>
+                    </div>
                 </div>
-                <button class="button button-primary button-wide" type="submit">Continue to email verification</button>
+                <button id="signup-submit" class="button button-primary button-wide" type="submit">Continue to email verification</button>
+                <p class="field-help" style="text-align:center; margin-top:8px;">Or use <em>Send OTP → Verify</em> above to verify first, then submit. Link stays same, WSGI sends JSON, JS updates HTML.</p>
                 <p class="helper-text">Already have an account? <a href="{% url 'bunkloop:login' %}">Log in</a></p>
             </form>
         </div>
     </div>
 </section>
 {% endblock %}
-{% block extra_js %}
+{% block extra_js %}<script src="{% static 'js/pages/signup.js' %}"></script>
     <script src="{% static 'js/item_form.js' %}"></script>
+    <script src="{% static 'js/auth_otp.js' %}"></script>
 {% endblock %}
