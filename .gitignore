@@ -32,6 +32,10 @@ __pycache__/
 .DS_Store
 *.pem
 log.md
+PROJECT_OVERVIEW.md
+
+# export / docs
+*.pdf
 
 # debug
 npm-debug.log*

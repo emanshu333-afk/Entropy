@@ -76,6 +76,8 @@ class User(AbstractUser):
     hostel = models.ForeignKey(Hostel, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
     email = models.EmailField(unique=True)
     gender = models.CharField(max_length=30, choices=GENDER_CHOICES, blank=True, default='')
+    identity_photo = models.ImageField(upload_to='identity_photos/', blank=True, null=True)
+    email_verified = models.BooleanField(default=False)
 
     REQUIRED_FIELDS = ['email', 'full_name', 'registration_id']
 
@@ -116,7 +118,7 @@ class Item(models.Model):
         ('renting', 'Renting'),
     ]
 
-    title = models.CharField(max_length=150)
+    title = models.CharField(max_length=150, default='Untitled item')
     description = models.TextField(blank=True, default='')
     registration_id = models.ForeignKey(User, to_field='registration_id', on_delete=models.CASCADE, related_name='items')
     category = models.ForeignKey(ItemCategory, on_delete=models.PROTECT, related_name='items')

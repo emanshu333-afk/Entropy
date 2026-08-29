@@ -29,7 +29,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-change-me')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if os.environ.get('DJANGO_ALLOWED_HOSTS') else []
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',') if os.environ.get('DJANGO_ALLOWED_HOSTS') else ['localhost', '127.0.0.1', 'testserver']
 
 
 # Application definition
@@ -77,14 +77,31 @@ WSGI_APPLICATION = 'entropy.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+DB_ENGINE = os.environ.get('DB_ENGINE') or 'django.db.backends.sqlite3'
+DB_NAME = os.environ.get('DB_NAME') or BASE_DIR / 'db.sqlite3'
+DB_USER = os.environ.get('DB_USER')
+DB_PASSWORD = os.environ.get('DB_PASSWORD')
+DB_HOST = os.environ.get('DB_HOST')
+DB_PORT = os.environ.get('DB_PORT')
+
+# Build the test database configuration
+TEST_DB_CONFIG = {}
+if 'postgresql' in DB_ENGINE or 'postgres' in DB_ENGINE:
+    TEST_DB_CONFIG = {'NAME': 'test_bunkloop_db'}
+elif 'sqlite' in DB_ENGINE:
+    TEST_DB_CONFIG = {'NAME': ':memory:'}
+else:
+    TEST_DB_CONFIG = {'NAME': 'test_bunkloop_db'}
+
 DATABASES = {
     'default': {
-        'ENGINE': os.environ.get('DB_ENGINE'),
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT'),
+        'ENGINE': DB_ENGINE,
+        'NAME': DB_NAME,
+        'USER': DB_USER or '',
+        'PASSWORD': DB_PASSWORD or '',
+        'HOST': DB_HOST or '',
+        'PORT': DB_PORT or '',
+        'TEST': TEST_DB_CONFIG,
     }
 }
 
@@ -131,3 +148,6 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -1,10 +1,16 @@
+import random
+
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+from django.core.mail import send_mail
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from .forms import ItemForm, UserProfileForm
 from .models import Hostel, Item, ItemCategory, ItemImage, ProfileImage, University, User
+
+OTP_STORE = {}
 
 
 def require_login(view_func):
@@ -80,12 +86,21 @@ def signup(request):
     if request.method == 'POST':
         form = UserProfileForm(request.POST, request.FILES)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.username = user.email.split('@')[0] + '-' + user.registration_id
-            user.set_password(form.cleaned_data['password'])
-            user.save()
-            messages.success(request, 'Profile created successfully. Please log in.')
-            return redirect('bunkloop:login')
+            email = form.cleaned_data['email']
+            otp = str(random.randint(100000, 999999))
+            # Store form data in session temporarily - don't create user yet
+            OTP_STORE[email] = {'otp': otp, 'expires_at': timezone.now().timestamp() + 600, 'form_data': form.cleaned_data, 'user_files': {'identity_photo': form.files['identity_photo'] if 'identity_photo' in form.files else None}}
+            send_mail(
+                subject='Bunkloop email verification',
+                message=f'Your OTP is {otp}. It is valid for 10 minutes.',
+                from_email='noreply@bunkloop.local',
+                recipient_list=[email],
+                fail_silently=True,
+            )
+            request.session['pending_email'] = email
+            request.session['pending_registration'] = {'email': email}
+            messages.success(request, 'Verification code sent to your student email. Please enter the OTP to continue.')
+            return redirect('bunkloop:verify_email')
     else:
         form = UserProfileForm()
     return render(
@@ -98,6 +113,52 @@ def signup(request):
             'profile_image_options': profile_image_options,
         },
     )
+
+
+def verify_email(request):
+    pending_email = request.session.get('pending_email')
+    if not pending_email:
+        return redirect('bunkloop:signup')
+
+    if request.method == 'POST':
+        entered_otp = request.POST.get('otp', '').strip()
+        stored = OTP_STORE.get(pending_email)
+        if not stored:
+            messages.error(request, 'Verification code expired. Please try again.')
+            return redirect('bunkloop:signup')
+        if float(timezone.now().timestamp()) > stored['expires_at']:
+            messages.error(request, 'Verification code expired. Please request a new one.')
+            return redirect('bunkloop:signup')
+        if entered_otp != stored['otp']:
+            messages.error(request, 'Invalid verification code. Please try again.')
+            return render(request, 'bunkloop/verify_email.html', {'email': pending_email})
+
+        # Create the user now that OTP is verified
+        form_data = stored['form_data']
+        user = User(
+            username=form_data['email'].split('@')[0] + '-' + form_data['registration_id'],
+            email=form_data['email'],
+            full_name=form_data['full_name'],
+            registration_id=form_data['registration_id'],
+            university=form_data['university'],
+            profile_image=form_data['profile_image'],
+            contact_number=form_data.get('contact_number', ''),
+            student_type=form_data.get('student_type', 'day_scholar'),
+            hostel=form_data.get('hostel'),
+            gender=form_data.get('gender', ''),
+            identity_photo=form_data.get('identity_photo'),
+            is_active=True,
+            email_verified=True,
+        )
+        user.set_password(form_data['password'])
+        user.save()
+        OTP_STORE.pop(pending_email, None)
+        request.session.pop('pending_email', None)
+        request.session.pop('pending_registration', None)
+        messages.success(request, 'Profile created successfully. Please log in.')
+        return redirect('bunkloop:login')
+
+    return render(request, 'bunkloop/verify_email.html', {'email': pending_email})
 
 
 @require_login

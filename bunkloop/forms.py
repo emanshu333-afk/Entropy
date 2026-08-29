@@ -1,7 +1,40 @@
+import re
+from urllib.parse import urlparse
+
+import dns.resolver
 from django import forms
 from django.core.exceptions import ValidationError
+from email_validator import EmailNotValidError, validate_email
 
 from .models import Hostel, Item, ItemCategory, ProfileImage, University, User
+
+
+def validate_student_email(email):
+    try:
+        validated = validate_email(email, check_deliverability=True)
+        normalized_email = validated.email
+    except EmailNotValidError:
+        raise ValidationError('Please enter a valid email address.')
+
+    domain = normalized_email.split('@')[-1].lower()
+    if not domain or '.' not in domain:
+        raise ValidationError('Please enter a valid university email domain.')
+
+    denied_domains = {'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'aol.com'}
+    if domain in denied_domains:
+        raise ValidationError('Please use a valid university or student email address.')
+
+    if not (domain.endswith('.edu') or '.ac.' in domain or 'university' in domain or 'edu.' in domain):
+        raise ValidationError('Only university or academic student email domains are allowed.')
+
+    try:
+        answers = dns.resolver.resolve(domain, 'MX')
+        if not answers:
+            raise ValidationError('This email domain could not be verified.')
+    except Exception:
+        raise ValidationError('This email domain could not be verified. Please use a valid student email.')
+
+    return normalized_email
 
 
 class UserProfileForm(forms.ModelForm):
@@ -10,6 +43,7 @@ class UserProfileForm(forms.ModelForm):
     university = forms.ModelChoiceField(queryset=University.objects.none(), required=True, empty_label='Choose university')
     hostel = forms.ModelChoiceField(queryset=Hostel.objects.none(), required=False, empty_label='Choose hostel')
     gender = forms.CharField(required=False)
+    identity_photo = forms.ImageField(required=True, widget=forms.ClearableFileInput(attrs={'accept': 'image/*', 'capture': 'environment'}))
     profile_image = forms.ModelChoiceField(
         queryset=ProfileImage.objects.all(),
         required=False,
@@ -37,6 +71,12 @@ class UserProfileForm(forms.ModelForm):
         self.fields['hostel'].queryset = Hostel.objects.select_related('university').order_by('university__name', 'name')
         self.fields['hostel'].required = False
         self.fields['profile_image'].required = False
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip()
+        if not email:
+            raise ValidationError('Email is required.')
+        return validate_student_email(email)
 
     def clean_gender(self):
         gender = (self.cleaned_data.get('gender') or '').strip()
@@ -80,6 +120,9 @@ class UserProfileForm(forms.ModelForm):
         if password and confirm_password and password != confirm_password:
             self.add_error('confirm_password', 'Passwords do not match.')
 
+        if cleaned_data.get('identity_photo') is None:
+            self.add_error('identity_photo', 'A live camera photo is required for registration.')
+
         return cleaned_data
 
     def save(self, commit=True):
@@ -91,6 +134,8 @@ class UserProfileForm(forms.ModelForm):
         user.university = university
         user.hostel = hostel
         user.gender = gender or ''
+        user.identity_photo = self.cleaned_data.get('identity_photo')
+        user.email_verified = True
         user.set_password(self.cleaned_data['password'])
         if commit:
             user.save()
