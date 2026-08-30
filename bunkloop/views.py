@@ -26,9 +26,18 @@ def require_login(view_func):
 
 
 def login_view(request):
-    # Redirect authenticated users away from auth pages on GET; allow POST to switch accounts
+    # Redirect authenticated users away from login on GET only if they have a complete profile
+    # If they have no university, allow them to see login to switch accounts (fixes signup→login loop)
     if request.method == 'GET' and request.session.get('user_registration_id'):
-        return redirect('bunkloop:home')
+        reg_id = request.session.get('user_registration_id')
+        try:
+            _cur = User.objects.filter(registration_id=reg_id).select_related('university').first()
+            has_uni = _cur and _cur.university_id
+        except Exception:
+            has_uni = False
+        if has_uni:
+            return redirect('bunkloop:home')
+        # No university → allow login page (don't redirect)
     if request.method == 'POST':
         # If already logged in and trying to log in as different user, clear session first
         if request.session.get('user_registration_id'):
